@@ -1,0 +1,34 @@
+# Python and Node
+.venv/
+node_modules/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.egg-info/
+.coverage
+.nox/
+dist/
+build/
+# Scientific raw or generated outputs
+data/
+results/
+output/
+figures/
+reports/
+*.csv
+*.pkl
+*.h5
+*.hdf5
+*.npy
+*.npz
+# Local transient test and research artifacts
+.tmp/
+tmp/
+.github-research/
+github-research-output/
+deep-research-output/
+*.log
+*.bak
+*.swp
+.DS_Store
+Thumbs.db

@@ -9,14 +9,14 @@
 - `py-infrastructure` 原样迁入 12 个文件，SHA-256 一致；公开 API 合同测试先红后绿（1 项通过）。
 - `figure-infrastructure` 的范围策略与单双栏预设已实现。Python 3.13 七项 + Node 七项测试通过，含 40 万采样点边界。
 - Python `uv.lock` 已锁定 33 个包；项目 `.venv` 使用 Python 3.13.16，通过完整安装，并且未修改全局开发环境。项目使用的 PyMuPDF 2.0 具有较重的转移依赖，后续审查依赖是否应精简。
-- Matplotlib/Seaborn 基础导出与真实几何布局已实现：PNG/SVG/PDF 两种尺寸、默认单图、热力图色条、原 Figure 状态不变、四侧边距和图例/轴标题距离收紧。Python 23 项测试通过，实际读取单栏折线/热力图 PNG 复审。
-- Plotly.js 离线 PNG/SVG 导出及部分布局已实现，Edge 实际读取收紧前后 PNG，验证字体、轴标题、图例、边距、原图状态和无网络请求。JavaScript 15 项测试通过。
-- Python/JS 的全图留白初步适配已通过代表图，尚未实现完整标签碰撞计数（当前标记为未验收）。标注避让、Nature PDF 审查与全图库覆盖仍未完成；完整 Skill 尚未发布。
+- Matplotlib/Seaborn 基础导出、布局和文本避让已实现：PNG/SVG/PDF 单双栏、原 Figure 状态不变、textalloc 优先自动避让、必要时引导箭头；单栏短标注实图复审。Python 26 项测试通过。
+- Plotly.js 离线 PNG/SVG、布局与必需峰值标签已通过 Edge 实际导出与 PNG/SVG 视觉验收；数据坐标锚点不变，标签不可放下时拒绝导出。JavaScript 17 项测试通过。
+- Python/JS 全图留白与必需标注初步适配已通过代表图；整体碰撞计数仍为 null，不能声称已完成通用碰撞审查。Nature PDF 审查和全图库覆盖未完成；完整 Skill 尚未发布。
 
 ## 下一步
-1. 增加必需数据标签避让与指向锚点的引导线，实现碰撞失败诊断。
-2. 完成 Nature PDF QA、各图形家族及自动图片视觉回归。
-3. 完成跨平台测试、Skill 安装、安全审计与公有仓库发布。
+1. 引入并测试 Nature Figure PDF 文本/图元碰撞和字号审查；记录许可证与上游版本。
+2. 图形家族覆盖和自动图片视觉回归。
+3. 跨平台测试、Skill 安装、安全审计及 GitHub 公有发布。
 
 ## 用户约束
 - 每个 Skill 的代码必须位于该 Skill 的 `scripts/` 内。

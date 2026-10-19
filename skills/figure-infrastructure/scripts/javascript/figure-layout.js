@@ -9,6 +9,8 @@
     ? require("./ranges.js") : root.ScientificFigureRanges;
   const layoutTools = typeof module !== "undefined" && module.exports
     ? require("./layout.js") : root.ScientificFigureLayout;
+  const annotationTools = typeof module !== "undefined" && module.exports
+    ? require("./annotations.js") : root.ScientificFigureAnnotations;
 
   class ScientificFigureExporter {
     constructor(plotly = root.Plotly) {
@@ -105,6 +107,10 @@
       document.body.appendChild(node);
       try {
         await this.plotly.newPlot(node, data, optimizedLayout, {staticPlot: true, responsive: false});
+        const annotationPlacements = options.annotations?.length
+          ? await new annotationTools.PlotlyAnnotationPlacer(this.plotly)
+              .place(node, options.annotations)
+          : [];
         const layoutMetrics = layoutTools.measurePlotlyLayout(node, preset);
         let dataUrl = await this.plotly.toImage(node, {
           format, width: preset.widthPx, height: preset.heightPx, scale: 1
@@ -113,7 +119,7 @@
         return {
           dataUrl, width: preset.widthPx, height: preset.heightPx,
           format, preset: presetName,
-          audit: {passed: layoutMetrics.clippingCount === 0, issues: layoutMetrics.clippingCount ? ["LAYOUT_CLIPPING"] : [], fontWarnings: [], layoutMetrics, stage: "geometry_partial"}
+          audit: {passed: layoutMetrics.clippingCount === 0, issues: layoutMetrics.clippingCount ? ["LAYOUT_CLIPPING"] : [], fontWarnings: [], layoutMetrics, annotationPlacements, stage: "geometry_partial"}
         };
       } finally {
         try { this.plotly.purge(node); } finally { node.remove(); }

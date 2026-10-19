@@ -12,6 +12,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from .audit import ExportAudit, LayoutValidationError
+from .annotations import place_annotations
 from .layout import FigureLayoutOptimizer, LayoutPolicy
 from .presets import PRESETS, FigurePreset
 from .ranges import RangePolicy, resolve_range
@@ -127,6 +128,8 @@ class FigureExporter:
                 layout_metrics = FigureLayoutOptimizer(
                     duplicate, self._primary_axes(duplicate)[0]
                 ).optimize(policy)
+            if annotations:
+                place_annotations(self._primary_axes(duplicate)[0], annotations)
             with warnings.catch_warnings(record=True) as captured:
                 warnings.simplefilter("always")
                 with mpl.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42}):

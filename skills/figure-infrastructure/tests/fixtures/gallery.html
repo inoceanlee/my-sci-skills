@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Offline Plotly export fixture</title></head>
+<body>
+<div id="plot" style="width:1004px;height:709px"></div>
+<script src="../../node_modules/plotly.js-dist-min/plotly.min.js"></script>
+<script src="../../scripts/javascript/ranges.js"></script>
+<script src="../../scripts/javascript/figure-layout.js"></script>
+<script>
+window.ready = (async () => {
+  const plot = document.getElementById("plot");
+  await Plotly.newPlot(plot, [{x:[0,1,2],y:[100,100.001,100.002],mode:"lines+markers",name:"Series"}],
+    {xaxis:{title:{text:"Time (s)"}},yaxis:{title:{text:"Value (mm)"}},showlegend:true});
+  await Plotly.relayout(plot, {"xaxis.range":[0.1,1.9]});
+  return true;
+})();
+</script>
+</body>
+</html>

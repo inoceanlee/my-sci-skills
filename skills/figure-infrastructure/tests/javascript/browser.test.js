@@ -38,6 +38,12 @@ test("offline PNG and SVG export preserves source Plotly state", async () => {
     assert.equal(data.remaining, 0);
     assert.equal(data.png.width,1004);
     assert.equal(data.png.height,709);
+    assert.ok(data.png.audit.layoutMetrics.axisTitleGapsPt.x >= 3);
+    assert.ok(data.png.audit.layoutMetrics.axisTitleGapsPt.y >= 3);
+    assert.ok(data.png.audit.layoutMetrics.plotAreaFraction >= .45);
+    assert.ok(data.png.audit.layoutMetrics.outerGapsPt.every(value => value >= 5.5));
+    assert.equal(data.png.audit.layoutMetrics.clippingCount, 0);
+    assert.ok(data.png.audit.layoutMetrics.legendPlotGapPt >= 4);
     assert.ok(data.png.dataUrl.startsWith("data:image/png;base64,"));
     const pngBytes = Buffer.from(data.png.dataUrl.split(",")[1],"base64");
     assert.equal(pngBytes.readUInt32BE(16),1004);

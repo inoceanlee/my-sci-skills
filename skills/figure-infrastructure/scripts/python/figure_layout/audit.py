@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass, field
 
+from .layout import LayoutMetrics
+
 
 @dataclass(frozen=True)
 class ExportAudit:
@@ -9,7 +11,8 @@ class ExportAudit:
     issues: tuple[str, ...] = ()
     font_warnings: tuple[str, ...] = ()
     axis_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
-    stage: str = "export_only"
+    layout_metrics: LayoutMetrics | None = None
+    stage: str = "geometry_partial"
 
 
 class LayoutValidationError(ValueError):

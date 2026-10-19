@@ -7,6 +7,8 @@
 (function (root) {
   const ranges = typeof module !== "undefined" && module.exports
     ? require("./ranges.js") : root.ScientificFigureRanges;
+  const layoutTools = typeof module !== "undefined" && module.exports
+    ? require("./layout.js") : root.ScientificFigureLayout;
 
   class ScientificFigureExporter {
     constructor(plotly = root.Plotly) {
@@ -95,13 +97,15 @@
         }
       }
 
+      const optimizedLayout = layoutTools.prepareCompactLayout(layout, options.layoutPolicy || {});
       const node = document.createElement("div");
       node.dataset.sciExport = "true";
       node.style.cssText = "position:fixed;left:-100000px;top:0;width:" + preset.widthPx +
         "px;height:" + preset.heightPx + "px;pointer-events:none;z-index:-1";
       document.body.appendChild(node);
       try {
-        await this.plotly.newPlot(node, data, layout, {staticPlot: true, responsive: false});
+        await this.plotly.newPlot(node, data, optimizedLayout, {staticPlot: true, responsive: false});
+        const layoutMetrics = layoutTools.measurePlotlyLayout(node, preset);
         let dataUrl = await this.plotly.toImage(node, {
           format, width: preset.widthPx, height: preset.heightPx, scale: 1
         });
@@ -109,7 +113,7 @@
         return {
           dataUrl, width: preset.widthPx, height: preset.heightPx,
           format, preset: presetName,
-          audit: {passed: true, issues: [], fontWarnings: [], stage: "export_only"}
+          audit: {passed: layoutMetrics.clippingCount === 0, issues: layoutMetrics.clippingCount ? ["LAYOUT_CLIPPING"] : [], fontWarnings: [], layoutMetrics, stage: "geometry_partial"}
         };
       } finally {
         try { this.plotly.purge(node); } finally { node.remove(); }

@@ -9,14 +9,14 @@
 - `py-infrastructure` 原样迁入 12 个文件，SHA-256 一致；公开 API 合同测试先红后绿（1 项通过）。
 - `figure-infrastructure` 的范围策略与单双栏预设已实现。Python 3.13 七项 + Node 七项测试通过，含 40 万采样点边界。
 - Python `uv.lock` 已锁定 33 个包；项目 `.venv` 使用 Python 3.13.16，通过完整安装，并且未修改全局开发环境。项目使用的 PyMuPDF 2.0 具有较重的转移依赖，后续审查依赖是否应精简。
-- Matplotlib/Seaborn 基础导出适配已实现：PNG/SVG/PDF 两种尺寸、拒绝默认多子图、允许热力图色条、保护传入 Figure 状态。Python 测试 18 项通过（包含范围测试）。
-- Plotly.js 单图离线 PNG/SVG 导出已实现，系统 Edge 浏览器中验证无外网请求、源图布局/缩放保持不变、两图幅与清理正常。JavaScript 11 项测试通过。
-- 整图空白优化、标注避让、Nature PDF 审查与图形家族覆盖仍未实现；完整 Skill 尚未发布。
+- Matplotlib/Seaborn 基础导出与真实几何布局已实现：PNG/SVG/PDF 两种尺寸、默认单图、热力图色条、原 Figure 状态不变、四侧边距和图例/轴标题距离收紧。Python 23 项测试通过，实际读取单栏折线/热力图 PNG 复审。
+- Plotly.js 离线 PNG/SVG 导出及部分布局已实现，Edge 实际读取收紧前后 PNG，验证字体、轴标题、图例、边距、原图状态和无网络请求。JavaScript 15 项测试通过。
+- Python/JS 的全图留白初步适配已通过代表图，尚未实现完整标签碰撞计数（当前标记为未验收）。标注避让、Nature PDF 审查与全图库覆盖仍未完成；完整 Skill 尚未发布。
 
 ## 下一步
-1. 对 Python/Plotly 适配器实现四边边距、坐标标题、图例、色条的自动布局与验收。
-2. 实现标注避让、Nature PDF 检查及图形家族回归。
-3. 完成 Skill 安装、跨平台测试、许可证/历史审计后公开发布。
+1. 增加必需数据标签避让与指向锚点的引导线，实现碰撞失败诊断。
+2. 完成 Nature PDF QA、各图形家族及自动图片视觉回归。
+3. 完成跨平台测试、Skill 安装、安全审计与公有仓库发布。
 
 ## 用户约束
 - 每个 Skill 的代码必须位于该 Skill 的 `scripts/` 内。
@@ -35,4 +35,4 @@
 - `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`
 
 ---
-_最后核对：2026-10-19_
+_最后核对：2026-10-20_

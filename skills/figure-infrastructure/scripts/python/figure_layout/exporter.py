@@ -12,6 +12,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from .audit import ExportAudit, LayoutValidationError
+from .layout import FigureLayoutOptimizer, LayoutPolicy
 from .presets import PRESETS, FigurePreset
 from .ranges import RangePolicy, resolve_range
 
@@ -114,10 +115,18 @@ class FigureExporter:
 
         duplicate = deepcopy(fig)
         axis_ranges: dict[str, tuple[float, float]] = {}
+        layout_metrics = None
         try:
             duplicate.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
             axis_ranges = self._apply_range_policy(duplicate, range_policy)
             duplicate.set_dpi(canvas.dpi)
+            policy = layout_policy if layout_policy is not None else LayoutPolicy()
+            if not isinstance(policy, LayoutPolicy):
+                raise TypeError("layout_policy must be LayoutPolicy")
+            if len(self._primary_axes(duplicate)) == 1:
+                layout_metrics = FigureLayoutOptimizer(
+                    duplicate, self._primary_axes(duplicate)[0]
+                ).optimize(policy)
             with warnings.catch_warnings(record=True) as captured:
                 warnings.simplefilter("always")
                 with mpl.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42}):
@@ -137,5 +146,5 @@ class FigureExporter:
             preset=preset,
             width_px=canvas.width_px,
             height_px=canvas.height_px,
-            audit=ExportAudit(passed=True, axis_ranges=axis_ranges),
+            audit=ExportAudit(passed=True, axis_ranges=axis_ranges, layout_metrics=layout_metrics),
         )

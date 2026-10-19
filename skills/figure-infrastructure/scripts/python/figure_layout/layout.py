@@ -67,7 +67,7 @@ class FigureLayoutOptimizer:
         ticks_x = self._visible_ticks(renderer, "x")
         ticks_y = self._visible_ticks(renderer, "y")
         boxes.extend(ticks_x + ticks_y)
-        for text in (ax.xaxis.label, ax.yaxis.label, ax.title):
+        for text in (ax.xaxis.label, ax.yaxis.label, ax.title, ax.xaxis.get_offset_text(), ax.yaxis.get_offset_text()):
             if text.get_visible() and text.get_text():
                 boxes.append(text.get_window_extent(renderer))
         xgap = (min(b.y0 for b in ticks_x) - ax.xaxis.label.get_window_extent(renderer).y1
@@ -126,7 +126,7 @@ class FigureLayoutOptimizer:
             children = [plot]
             children += self._visible_ticks(renderer, "x")
             children += self._visible_ticks(renderer, "y")
-            children += [x.get_window_extent(renderer) for x in (ax.xaxis.label, ax.yaxis.label, ax.title)
+            children += [x.get_window_extent(renderer) for x in (ax.xaxis.label, ax.yaxis.label, ax.title, ax.xaxis.get_offset_text(), ax.yaxis.get_offset_text())
                          if x.get_visible() and x.get_text()]
             bbox = Bbox.union(children)
             padding_px = 6 * fig.dpi / 72

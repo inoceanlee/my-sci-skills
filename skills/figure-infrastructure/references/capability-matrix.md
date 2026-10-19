@@ -1,12 +1,20 @@
-# 绘图能力矩阵
+# 科研图能力矩阵
 
-状态：`supported` 表示通过实际导出和布局测试；`native_only` 表示仅绘图库支持绘制；`unsupported` 表示没有完成适配。
+`supported`：已完成真实导出、测试和至少一张样图视觉读取；
+`native_only`：绘图库可绘制，但尚未完成该类型的全部空间/导出验收；
+`unsupported`：尚无承诺的适配。
 
-| 图形类别 | Matplotlib/Seaborn | Plotly.js |
+| 能力 | Matplotlib/Seaborn | Plotly.js |
 | --- | --- | --- |
-| 纯范围策略与单双栏尺寸 | supported | supported |
-| 折线、误差带、柱状、饼/环、分布统计、散点、热力图等 | native_only | native_only |
-| 自动标签避让、整图压缩和成品导出 | unsupported | unsupported |
-| PDF 输出 | native_only | unsupported |
+| 范围策略与单双栏固定图幅 | supported | supported |
+| 折线/距离频谱单图 PNG/SVG | supported | supported |
+| PNG 实图自动收紧整体留白 | supported（折线、热力） | supported（折线） |
+| 直接峰值标注、文字避让与锚点箭头 | supported（折线、可放下的标签） | supported（折线、可放下的标签） |
+| 双栏/单栏 PDF 导出 | supported | unsupported |
+| Nature PDF 碰撞与字号审查 | supported（真实 PDF） | unsupported |
+| 热力图与色条 | supported（PNG） | native_only |
+| 箱线、小提琴、误差带、KDE、ECDF、散点、气泡、回归、柱状、饼/环、相关矩阵、等高线 | native_only | native_only |
+| 通用碰撞检测与所有图形自动视觉审查 | unsupported | unsupported |
 
-矩阵随测试任务更新；只有覆盖真实导出和视觉验收的类别才能标为 supported。
+不能将代表性测试推广为对全部科研图形的质量保证。
+字数过长的必需标注无法安全放下时，会拒绝导出；不得缩小物理字号或省略必要标签以规避错误。

@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from .layout import LayoutMetrics
+from .nature import NatureAudit
 
 
 @dataclass(frozen=True)
@@ -12,6 +13,7 @@ class ExportAudit:
     font_warnings: tuple[str, ...] = ()
     axis_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
     layout_metrics: LayoutMetrics | None = None
+    nature_audit: NatureAudit | None = None
     stage: str = "geometry_partial"
 
 

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 import warnings
+from tempfile import TemporaryDirectory
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 from .audit import ExportAudit, LayoutValidationError
 from .annotations import place_annotations
 from .layout import FigureLayoutOptimizer, LayoutPolicy
+from .nature import audit_nature_pdf
 from .presets import PRESETS, FigurePreset
 from .ranges import RangePolicy, resolve_range
 
@@ -100,6 +102,8 @@ class FigureExporter:
         range_policy: dict[str, RangePolicy] | None = None,
         layout_policy=None,
         allow_subplots: bool = False,
+        nature_pdf_audit: bool | None = None,
+        nature_audit_strict: bool = False,
     ) -> ExportResult:
         output = Path(path)
         image_format = output.suffix.lower().lstrip(".")
@@ -117,6 +121,7 @@ class FigureExporter:
         duplicate = deepcopy(fig)
         axis_ranges: dict[str, tuple[float, float]] = {}
         layout_metrics = None
+        nature_result = None
         try:
             duplicate.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
             axis_ranges = self._apply_range_policy(duplicate, range_policy)
@@ -140,6 +145,29 @@ class FigureExporter:
                 raise LayoutValidationError(["MISSING_FONT_GLYPHS", *font_warnings])
             if image_format == "svg":
                 self._set_svg_mm_size(output, canvas)
+            do_nature_audit = (
+                image_format == "pdf" if nature_pdf_audit is None else nature_pdf_audit
+            )
+            if do_nature_audit:
+                if image_format == "pdf":
+                    nature_result = audit_nature_pdf(output, strict=nature_audit_strict)
+                else:
+                    with TemporaryDirectory() as tmp:
+                        temporary_pdf = Path(tmp) / "rendered-for-nature-qa.pdf"
+                        with mpl.rc_context({"pdf.fonttype": 42}):
+                            duplicate.savefig(
+                                temporary_pdf, format="pdf",
+                                dpi=canvas.dpi, bbox_inches=None,
+                            )
+                        nature_result = audit_nature_pdf(
+                            temporary_pdf, strict=nature_audit_strict
+                        )
+                if nature_audit_strict and nature_result.status != "passed":
+                    output.unlink(missing_ok=True)
+                    raise LayoutValidationError([
+                        "NATURE_AUDIT_" + nature_result.status.upper(),
+                        *nature_result.issues,
+                    ])
         finally:
             plt.close(duplicate)
 
@@ -149,5 +177,12 @@ class FigureExporter:
             preset=preset,
             width_px=canvas.width_px,
             height_px=canvas.height_px,
-            audit=ExportAudit(passed=True, axis_ranges=axis_ranges, layout_metrics=layout_metrics),
+            audit=ExportAudit(
+                passed=nature_result is None or nature_result.status == "passed",
+                issues=nature_result.issues if nature_result is not None else (),
+                axis_ranges=axis_ranges,
+                layout_metrics=layout_metrics,
+                nature_audit=nature_result,
+                stage="nature_pdf_partial" if nature_result is not None else "geometry_partial",
+            ),
         )

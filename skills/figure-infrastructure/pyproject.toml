@@ -8,7 +8,7 @@ dependencies = [
   "seaborn>=0.13,<0.15",
   "pillow>=10",
   "pypdf>=5",
-  "pymupdf>=1.24",
+  "pymupdf>=1.24,<2.0",
   "textalloc>=1.1",
 ]
 

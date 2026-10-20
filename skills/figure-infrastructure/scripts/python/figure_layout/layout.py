@@ -1,8 +1,28 @@
 """Compact single-panel figure layout using measured renderer geometry."""
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Literal
 from matplotlib.transforms import Bbox
+
+
+@dataclass(frozen=True)
+class ProtectedArea:
+    id: str
+    x_pt: float
+    y_pt: float
+    width_pt: float
+    height_pt: float
+
+    def __post_init__(self):
+        values = (self.x_pt, self.y_pt, self.width_pt, self.height_pt)
+        try:
+            numeric = all(not isinstance(value, bool) and isfinite(value) for value in values)
+        except (TypeError, ValueError, OverflowError):
+            numeric = False
+        if (not isinstance(self.id, str) or not self.id or not numeric or
+                self.width_pt <= 0 or self.height_pt <= 0):
+            raise ValueError("PROTECTED_AREA_INVALID")
 
 
 @dataclass(frozen=True)
@@ -16,6 +36,9 @@ class LayoutPolicy:
             raise ValueError("INVALID_LAYOUT_MODE")
         if self.legend not in ("auto", "inside", "outside", "fixed"):
             raise ValueError("INVALID_LEGEND_MODE")
+        if (not isinstance(self.protected_areas, tuple) or
+                any(not isinstance(area, ProtectedArea) for area in self.protected_areas)):
+            raise ValueError("PROTECTED_AREA_INVALID")
 
 
 @dataclass(frozen=True)
@@ -104,11 +127,47 @@ class FigureLayoutOptimizer:
             clipping_count=sum(v < -0.7 for v in gaps)
         )
 
+    def _exclude_protected_areas(self, bounds, areas, padding):
+        left, bottom, right, top = bounds
+        width_pt = self.figure.bbox.width * 72 / self.figure.dpi
+        height_pt = self.figure.bbox.height * 72 / self.figure.dpi
+        left_padding, right_padding, bottom_padding, top_padding = padding
+        candidates = [(left, bottom, right, top)]
+        for area in areas:
+            if (area.x_pt < 0 or area.y_pt < 0 or
+                    area.x_pt + area.width_pt > width_pt or
+                    area.y_pt + area.height_pt > height_pt):
+                raise ValueError("PROTECTED_AREA_INVALID")
+            x0, x1 = area.x_pt / width_pt, (area.x_pt + area.width_pt) / width_pt
+            y1, y0 = 1 - area.y_pt / height_pt, 1 - (
+                area.y_pt + area.height_pt
+            ) / height_pt
+            x0 -= right_padding
+            x1 += left_padding
+            y0 -= top_padding
+            y1 += bottom_padding
+            next_candidates = []
+            for x0c, y0c, x1c, y1c in candidates:
+                if not (x0c < x1 and x1c > x0 and y0c < y1 and y1c > y0):
+                    next_candidates.append((x0c, y0c, x1c, y1c))
+                    continue
+                next_candidates.extend((
+                    (x0c, y0c, min(x1c, x0), y1c),
+                    (max(x0c, x1), y0c, x1c, y1c),
+                    (x0c, y0c, x1c, min(y1c, y0)),
+                    (x0c, max(y1, y0c), x1c, y1c),
+                ))
+            candidates = [
+                item for item in next_candidates
+                if item[2] - item[0] >= .2 and item[3] - item[1] >= .2
+            ]
+            if not candidates:
+                raise ValueError("PROTECTED_AREA_CONFLICT")
+        return max(candidates, key=lambda item: (item[2] - item[0]) * (item[3] - item[1]))
+
     def optimize(self, policy):
         if policy.mode == "preserve":
             return self.measure()
-        if policy.protected_areas:
-            raise ValueError("PROTECTED_AREAS_UNSUPPORTED")
         fig, ax = self.figure, self.ax
         fig.set_layout_engine(None)
         if ax.xaxis.label.get_text():
@@ -119,6 +178,13 @@ class FigureLayoutOptimizer:
         outside = legend is not None and policy.legend in ("auto", "outside")
         cbaxes = self._colorbars()
         renderer = self._render()
+        fixed_legend_anchor = None
+        if legend is not None and policy.legend == "fixed":
+            legend_bbox = legend.get_window_extent(renderer)
+            fixed_legend_anchor = fig.transFigure.inverted().transform(
+                (legend_bbox.x0 + legend_bbox.width / 2,
+                 legend_bbox.y0 + legend_bbox.height / 2)
+            )
         legend_above = bool(outside and legend.get_window_extent(renderer).width > fig.bbox.width * .18)
         for _ in range(4):
             renderer = self._render()
@@ -144,7 +210,21 @@ class FigureLayoutOptimizer:
             if cbaxes:
                 reserved_px += cbaxes[0].get_tightbbox(renderer).width + 4 * fig.dpi / 72
             right = max(left + .2, min(.99, 1 - reserved_px / fig.bbox.width))
+            padding = (
+                max(0, plot.x0 - bbox.x0) / fig.bbox.width,
+                max(0, bbox.x1 - plot.x1) / fig.bbox.width,
+                max(0, plot.y0 - bbox.y0) / fig.bbox.height,
+                max(0, bbox.y1 - plot.y1) / fig.bbox.height,
+            )
+            left, bottom, right, top = self._exclude_protected_areas(
+                (left, bottom, right, top), policy.protected_areas, padding
+            )
             ax.set_position((left, bottom, right - left, top - bottom))
+            if fixed_legend_anchor is not None:
+                legend.set_bbox_to_anchor(
+                    fixed_legend_anchor, transform=fig.transFigure
+                )
+                legend._loc = 10  # center on its original page-space position
             if legend_above:
                 legend.set_bbox_to_anchor(
                     (1, 1 + 9 * fig.dpi / 72 /

@@ -6,7 +6,7 @@ from typing import Literal
 
 from matplotlib.transforms import Bbox
 
-from .layout import LayoutMetrics
+from .layout import LayoutMetrics, ProtectedArea
 from .nature import NatureAudit
 
 
@@ -68,6 +68,35 @@ class GeometryAuditor:
         unauditable = []
         clipping_count = 0
 
+        factor = 72 / fig.dpi
+        canvas_width_pt = fig.bbox.width * factor
+        canvas_height_pt = fig.bbox.height * factor
+        protected_boxes = []
+        try:
+            requested_areas = tuple(protected_areas)
+        except TypeError:
+            requested_areas = ()
+            issues.append(GeometryIssue("PROTECTED_AREA_INVALID", ("protected_areas",), ()))
+        for area in requested_areas:
+            if not isinstance(area, ProtectedArea):
+                issues.append(GeometryIssue(
+                    "PROTECTED_AREA_INVALID", (getattr(area, "id", "protected_area"),), ()
+                ))
+                continue
+            x, y, width, height = area.x_pt, area.y_pt, area.width_pt, area.height_pt
+            if x < 0 or y < 0 or x + width > canvas_width_pt or y + height > canvas_height_pt:
+                issues.append(GeometryIssue(
+                    "PROTECTED_AREA_INVALID", (area.id,), ((x, y, width, height),)
+                ))
+                continue
+            left = fig.bbox.x0 + x / factor
+            top = fig.bbox.y1 - y / factor
+            protected_boxes.append((
+                area.id, Bbox.from_bounds(left, top - height / factor,
+                                          width / factor, height / factor),
+                (x, y, width, height),
+            ))
+
         def add(element_id, role, artist, bbox=None):
             nonlocal clipping_count
             if not artist.get_visible():
@@ -110,7 +139,17 @@ class GeometryAuditor:
             add_text(f"{legend_id}:title", "legend_text", legend.get_title())
             for index, text in enumerate(legend.get_texts()):
                 add_text(f"{legend_id}:entry:{index}", "legend_text", text)
+        for index, colorbar_ax in enumerate(fig.axes):
+            if (colorbar_ax is ax or not colorbar_ax.get_visible() or
+                    getattr(colorbar_ax, "_colorbar", None) is None and
+                    colorbar_ax.get_label() != "<colorbar>"):
+                continue
+            bbox = colorbar_ax.get_tightbbox(renderer)
+            if self._valid_bbox(bbox):
+                elements.append(_Element(f"colorbar:{index}", "colorbar", bbox))
+                roles.add("colorbar")
 
+        line_shapes = []
         for index, line in enumerate(ax.lines):
             if not line.get_visible():
                 continue
@@ -130,6 +169,7 @@ class GeometryAuditor:
                 continue
             if len(vertices) and not any(valid):
                 continue
+            line_shapes.append((line_id, vertices, valid))
             roles.add("data_line")
             for element in elements:
                 if element.role == "legend" and self._line_hits_bbox(vertices, valid, element.bbox):
@@ -137,11 +177,94 @@ class GeometryAuditor:
                         "DATA_OCCLUSION", (element.id, line_id),
                         (self._rect_pt(fig, element.bbox),), None, None
                     ))
-
         if ax.images or ax.collections or ax.patches:
             unauditable.append("unsupported_data_artist")
-        if protected_areas:
-            unauditable.append("protected_areas")
+
+        tolerance_px = .25 / factor
+        for area_id, area_bbox, area_rect in protected_boxes:
+            for element in elements:
+                if (element.bbox.x1 <= area_bbox.x0 + tolerance_px or
+                        element.bbox.x0 >= area_bbox.x1 - tolerance_px or
+                        element.bbox.y1 <= area_bbox.y0 + tolerance_px or
+                        element.bbox.y0 >= area_bbox.y1 - tolerance_px):
+                    continue
+                overlap = Bbox.from_extents(
+                    max(element.bbox.x0, area_bbox.x0),
+                    max(element.bbox.y0, area_bbox.y0),
+                    min(element.bbox.x1, area_bbox.x1),
+                    min(element.bbox.y1, area_bbox.y1),
+                )
+                issues.append(GeometryIssue(
+                    "PROTECTED_AREA_CONFLICT", (area_id, element.id),
+                    (area_rect, self._rect_pt(fig, element.bbox)),
+                    overlap.width * factor * overlap.height * factor,
+                ))
+            line_bbox = area_bbox
+            if (area_bbox.width > 2 * tolerance_px and
+                    area_bbox.height > 2 * tolerance_px):
+                line_bbox = Bbox.from_extents(
+                    area_bbox.x0 + tolerance_px, area_bbox.y0 + tolerance_px,
+                    area_bbox.x1 - tolerance_px, area_bbox.y1 - tolerance_px,
+                )
+            for line_id, vertices, valid in line_shapes:
+                if self._line_hits_bbox(vertices, valid, line_bbox):
+                    issues.append(GeometryIssue(
+                        "PROTECTED_AREA_CONFLICT", (area_id, line_id), (area_rect,)
+                    ))
+        def gap_px(first, second):
+            dx = max(0, first.bbox.x0 - second.bbox.x1,
+                     second.bbox.x0 - first.bbox.x1)
+            dy = max(0, first.bbox.y0 - second.bbox.y1,
+                     second.bbox.y0 - first.bbox.y1)
+            return (dx * dx + dy * dy) ** .5
+
+        for axis_name in ("x", "y"):
+            title = next((item for item in elements
+                          if item.id == f"axis:{axis_name}_title"), None)
+            ticks = [item for item in elements
+                     if item.id.startswith(f"tick:{axis_name}:")]
+            if title is not None and ticks:
+                nearest = min(ticks, key=lambda item: gap_px(title, item))
+                gap_pt = gap_px(title, nearest) * factor
+                if gap_pt < 3 - .25:
+                    issues.append(GeometryIssue(
+                        "CLEARANCE_VIOLATION", (title.id, nearest.id),
+                        (self._rect_pt(fig, title.bbox), self._rect_pt(fig, nearest.bbox)),
+                        gap_deficit_pt=3 - gap_pt,
+                    ))
+
+        for container in (item for item in elements if item.role in ("legend", "colorbar")):
+            neighbors = [item for item in elements if item is not container and
+                         not item.id.startswith(container.id + ":")]
+            if neighbors:
+                nearest = min(neighbors, key=lambda item: gap_px(container, item))
+                gap_pt = gap_px(container, nearest) * factor
+                if gap_pt < 4 - .25:
+                    issues.append(GeometryIssue(
+                        "CLEARANCE_VIOLATION", (container.id, nearest.id),
+                        (self._rect_pt(fig, container.bbox), self._rect_pt(fig, nearest.bbox)),
+                        gap_deficit_pt=4 - gap_pt,
+                    ))
+
+        if elements:
+            edges = (
+                ("left", min(elements, key=lambda item: item.bbox.x0),
+                 lambda box: box.x0 - fig.bbox.x0),
+                ("right", max(elements, key=lambda item: item.bbox.x1),
+                 lambda box: fig.bbox.x1 - box.x1),
+                ("bottom", min(elements, key=lambda item: item.bbox.y0),
+                 lambda box: box.y0 - fig.bbox.y0),
+                ("top", max(elements, key=lambda item: item.bbox.y1),
+                 lambda box: fig.bbox.y1 - box.y1),
+            )
+            for side, element, distance in edges:
+                gap_pt = distance(element.bbox) * factor
+                if gap_pt < 6 - .25:
+                    issues.append(GeometryIssue(
+                        "CLEARANCE_VIOLATION", (element.id, f"canvas:{side}"),
+                        (self._rect_pt(fig, element.bbox),),
+                        gap_deficit_pt=6 - gap_pt,
+                    ))
 
         text_elements = [item for item in elements
                          if item.role in ("axis_title", "tick_label", "annotation", "legend_text")]

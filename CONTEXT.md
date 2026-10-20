@@ -14,8 +14,8 @@
 - Python 16 类与 Plotly 10 类图表的单/双栏样图已视觉审查，标签、图例和色条均清晰且未裁切。
 - 合并后全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
 - Nature Figure PDF 审查已按 Apache-2.0、固定 commit 与字节哈希引入。Python PDF 默认报告审查状态。
-- 2026-10-20：几何验收设计与实施计划已获授权执行。Task 1 Python 几何审计已完成；Task 2 Plotly SVG 几何审计与 27 项 JS 回归已通过，仍在临时任务分支，尚未提交或合并。
-- Plotly 的渲染文本分布于多个 `svg.main-svg` 根；审计器已统一按导出画布坐标检查全部根节点。导出器接入、保护区与全图审计仍待后续任务。
+- 2026-10-20：几何验收计划执行中。Task 1 Python 审计提交 `a9e346a`（206 项通过）；Task 2 Plotly SVG 审计提交 `7e63535`（27 项 JS 回归通过）。Task 3 保护区避让、固定元素位置保持与实测 3/4/6 pt 净空已实现，专项回归 Python 28 项、JS 26 项通过；Task 3 提交待做，任务分支尚未合并。
+- 审计器可报告 `PROTECTED_AREA_INVALID`、`PROTECTED_AREA_CONFLICT` 与 3/4/6 pt `CLEARANCE_VIOLATION`；compact 避让保护区，preserve 不移动现有内容并报告冲突，Python fixed 图例保持页面坐标。Python/Plotly 最终导出验收与完整图族覆盖仍待 Task 4–6。
 
 ## 下一步
 
@@ -37,9 +37,8 @@
 - 代表性图形测试不等于对全部用户数据的质量保证。
 - Sci Skill 版本通过 Git 标签锁定，避免多端维护分叉。
 
-## 活跃问题
-- Plotly 通用碰撞检测尚未实现。
-- 自动几何 QA、Skill 安装、Windows/Linux CI 和公开发布仍待完成。
+- Python/Plotly 最终导出尚未接入完整几何门槛；Task 4–5 待完成。
+- Task 6 的图族完整角色覆盖、实际视觉验收、能力表与最终安全复审待完成。
 
 ## 文件入口
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`

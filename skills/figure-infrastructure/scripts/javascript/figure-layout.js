@@ -99,7 +99,9 @@
         }
       }
 
-      const optimizedLayout = layoutTools.prepareCompactLayout(layout, options.layoutPolicy || {});
+      const optimizedLayout = layoutTools.prepareCompactLayout(
+        layout, options.layoutPolicy || {}, preset
+      );
       const node = document.createElement("div");
       node.dataset.sciExport = "true";
       node.style.cssText = "position:fixed;left:-100000px;top:0;width:" + preset.widthPx +

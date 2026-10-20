@@ -47,3 +47,58 @@ test("compact figure enforces readable physical fonts and safe title offsets", (
   assert.ok(layout.xaxis.title.standoff >= 18);
   assert.ok(layout.yaxis.title.standoff >= 18);
 });
+
+
+test("fixed legend remains in place when layout has protected areas", () => {
+  const source={margin:{l:100},legend:{x:1.4,y:.5}};
+  const areas=[{id:"logo",x_pt:12,y_pt:12,width_pt:40,height_pt:20}];
+  const layout=prepareCompactLayout(source,{mode:"compact",legend:"fixed",protectedAreas:areas},
+    {widthPx:800,heightPx:600,dpi:96});
+
+  assert.deepEqual(layout.legend,source.legend);
+  assert.deepEqual(source.legend,{x:1.4,y:.5});
+});
+
+
+test("invalid protected area dimensions fail with stable code", () => {
+  assert.throws(()=>prepareCompactLayout({},{
+    mode:"compact",
+    protectedAreas:[{id:"logo",x_pt:0,y_pt:0,width_pt:-1,height_pt:10}]
+  }),error=>error.message==="PROTECTED_AREA_INVALID");
+});
+
+
+test("compact Plotly layout excludes protected areas by physical points", () => {
+  const presets=[
+    {widthPx:1004,heightPx:709,dpi:300},
+    {widthPx:2126,heightPx:1241,dpi:300}
+  ];
+  const area={id:"reserved",x_pt:100,y_pt:70,width_pt:40,height_pt:40};
+  for(const preset of presets){
+    const layout=prepareCompactLayout({
+      width:preset.widthPx,height:preset.heightPx
+    },{protectedAreas:[area]},preset);
+    const margin=layout.margin;
+    const xdomain=layout.xaxis.domain||[0,1];
+    const ydomain=layout.yaxis.domain||[0,1];
+    const plot={
+      x:margin.l+xdomain[0]*(preset.widthPx-margin.l-margin.r),
+      y:margin.t+(1-ydomain[1])*(preset.heightPx-margin.t-margin.b),
+      w:(xdomain[1]-xdomain[0])*(preset.widthPx-margin.l-margin.r),
+      h:(ydomain[1]-ydomain[0])*(preset.heightPx-margin.t-margin.b)
+    };
+    const reserved={x:area.x_pt*preset.dpi/72,y:area.y_pt*preset.dpi/72,
+      w:area.width_pt*preset.dpi/72,h:area.height_pt*preset.dpi/72};
+    assert.ok(plot.x+plot.w<=reserved.x||plot.x>=reserved.x+reserved.w||
+      plot.y+plot.h<=reserved.y||plot.y>=reserved.y+reserved.h,
+    JSON.stringify({preset,plot,reserved}));
+  }
+});
+
+
+test("compact Plotly layout reports a protected region with no viable candidate", () => {
+  const preset={widthPx:800,heightPx:600,dpi:96};
+  assert.throws(()=>prepareCompactLayout({},{
+    protectedAreas:[{id:"full",x_pt:0,y_pt:0,width_pt:600,height_pt:450}]
+  },preset),error=>error.message==="PROTECTED_AREA_CONFLICT");
+});

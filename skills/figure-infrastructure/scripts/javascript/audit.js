@@ -16,7 +16,6 @@
           issue("GEOMETRY_NOT_AUDITABLE",["svg:missing"],[])
         ],[],null,null);
       }
-      if(protectedAreas.length)unknown.push("protected_areas");
       const selectAll=selector=>svgs.flatMap(root=>Array.from(root.querySelectorAll(selector)));
 
       let viewBox=svg.viewBox?.baseVal;
@@ -66,6 +65,24 @@
         };
       };
       const inCanvas=rect=>rect.x>=0&&rect.y>=0&&rect.x+rect.w<=width&&rect.y+rect.h<=height;
+      const protectedBoxes=[];
+      if(!Array.isArray(protectedAreas)){
+        issues.push(issue("PROTECTED_AREA_INVALID",["protected_areas"],[]));
+      }else for(const area of protectedAreas){
+        const valid=area&&typeof area.id==="string"&&area.id&&
+          [area.x_pt,area.y_pt,area.width_pt,area.height_pt].every(Number.isFinite)&&
+          area.width_pt>0&&area.height_pt>0;
+        const rect=valid?{
+          x:area.x_pt/pt,y:area.y_pt/pt,
+          w:area.width_pt/pt,h:area.height_pt/pt
+        }:null;
+        if(!valid||!inCanvas(rect)){
+          issues.push(issue("PROTECTED_AREA_INVALID",
+            [area?.id||"protected_area"],rect?[rectPt(rect)]:[]));
+          continue;
+        }
+        protectedBoxes.push({id:area.id,rect});
+      }
       const visible=element=>{
         const style=element.ownerDocument.defaultView.getComputedStyle(element);
         return style.display!=="none"&&style.visibility!=="hidden"&&Number(style.opacity)!==0;
@@ -90,6 +107,13 @@
         if(!rect){unknown.push(id);continue;}
         roles.add(role);
         textElements.push({id,role,rect});
+        for(const area of protectedBoxes){
+          const overlap=this.intersection(rect,area.rect);
+          if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
+            [rectPt(area.rect),rectPt(rect)],{
+              overlapPt2:overlap.w*pt*overlap.h*pt
+            }));
+        }
         if(!inCanvas(rect)){
           clippingCount++;
           issues.push(issue("GEOMETRY_CLIPPING",[id],[rectPt(rect)]));
@@ -103,18 +127,89 @@
         if(!rect){unknown.push("legend:geometry");continue;}
         const id="legend:"+(legendElements.length+1);
         roles.add("legend");
+        for(const area of protectedBoxes){
+          const overlap=this.intersection(rect,area.rect);
+          if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
+            [rectPt(area.rect),rectPt(rect)],{
+              overlapPt2:overlap.w*pt*overlap.h*pt
+            }));
+        }
         legendElements.push({id,rect});
         if(!inCanvas(rect)){
           clippingCount++;
           issues.push(issue("GEOMETRY_CLIPPING",[id],[rectPt(rect)]));
         }
       }
+      let colorbarIndex=0;
+      const colorbarElements=[];
       for(const colorbar of selectAll(".colorbar")){
         if(!visible(colorbar))continue;
-        if(!measure(colorbar))unknown.push("colorbar:geometry");
-        else roles.add("colorbar");
+        const rect=measure(colorbar);
+        if(!rect){unknown.push("colorbar:geometry");continue;}
+        const id=`colorbar:${++colorbarIndex}`;
+        roles.add("colorbar");
+        colorbarElements.push({id,rect});
+        for(const area of protectedBoxes){
+          const overlap=this.intersection(rect,area.rect);
+          if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
+            [rectPt(area.rect),rectPt(rect)],{
+              overlapPt2:overlap.w*pt*overlap.h*pt
+            }));
+        }
       }
-
+      const gapPx=(a,b)=>{
+        const dx=Math.max(0,a.x-(b.x+b.w),b.x-(a.x+a.w));
+        const dy=Math.max(0,a.y-(b.y+b.h),b.y-(a.y+a.h));
+        return Math.hypot(dx,dy);
+      };
+      for(const axis of ["x","y"]){
+        const title=textElements.find(item=>item.id===`axis:${axis}_title`);
+        const ticks=textElements.filter(item=>item.id.startsWith(`tick:${axis}:`));
+        if(title&&ticks.length){
+          const nearest=ticks.reduce((best,item)=>
+            gapPx(title.rect,item.rect)<gapPx(title.rect,best.rect)?item:best);
+          const gap=gapPx(title.rect,nearest.rect)*pt;
+          if(gap<3-.25)issues.push(issue("CLEARANCE_VIOLATION",
+            [title.id,nearest.id],[rectPt(title.rect),rectPt(nearest.rect)],
+            {gapDeficitPt:3-gap}));
+        }
+      }
+      for(const container of [...legendElements,...colorbarElements]){
+        const neighbors=[
+          ...textElements.filter(item=>!["legend_text","colorbar_text"].includes(item.role)),
+          ...legendElements.filter(item=>item!==container),
+          ...colorbarElements.filter(item=>item!==container)
+        ];
+        if(neighbors.length){
+          const nearest=neighbors.reduce((best,item)=>
+            gapPx(container.rect,item.rect)<gapPx(container.rect,best.rect)?item:best);
+          const gap=gapPx(container.rect,nearest.rect)*pt;
+          if(gap<4-.25)issues.push(issue("CLEARANCE_VIOLATION",
+            [container.id,nearest.id],[rectPt(container.rect),rectPt(nearest.rect)],
+            {gapDeficitPt:4-gap}));
+        }
+      }
+      const outerElements=[...textElements,...legendElements,...colorbarElements];
+      if(outerElements.length){
+        const edges=[
+          ["left",outerElements.reduce((best,item)=>item.rect.x<best.rect.x?item:best)],
+          ["right",outerElements.reduce((best,item)=>item.rect.x+item.rect.w>
+            best.rect.x+best.rect.w?item:best)],
+          ["top",outerElements.reduce((best,item)=>item.rect.y<best.rect.y?item:best)],
+          ["bottom",outerElements.reduce((best,item)=>item.rect.y+item.rect.h>
+            best.rect.y+best.rect.h?item:best)]
+        ];
+        for(const [side,item] of edges){
+          const gapPxToCanvas=side==="left"?item.rect.x:
+            side==="right"?width-item.rect.x-item.rect.w:
+            side==="top"?item.rect.y:height-item.rect.y-item.rect.h;
+          const gap=gapPxToCanvas*pt;
+          if(gap<6-.25)issues.push(issue("CLEARANCE_VIOLATION",
+            [item.id,`canvas:${side}`],[rectPt(item.rect)],{
+              gapDeficitPt:6-gap
+            }));
+        }
+      }
       for(let i=0;i<textElements.length;i++){
         for(let j=i+1;j<textElements.length;j++){
           const a=textElements[i],b=textElements[j];
@@ -196,6 +291,15 @@
         shapes.forEach((shape,shapeIndex)=>{
           const rect=measure(shape,shape.matches("path.js-line"));
           if(!rect){unknown.push(`${id}:element:${shapeIndex}`);return;}
+          for(const area of protectedBoxes){
+            const overlap=this.intersection(rect,area.rect);
+            const hits=type==="scatter"&&modeHasLines(trace)&&shape.matches("path.js-line")
+              ? this.pathHits(shape,area.rect,plotRect,width,height):Boolean(overlap);
+            if(hits)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
+              [rectPt(area.rect),rectPt(rect)],{
+                overlapPt2:overlap?overlap.w*pt*overlap.h*pt:undefined
+              }));
+          }
           for(const legend of legendElements){
             const overlap=this.intersection(rect,legend.rect);
             if(!overlap)continue;

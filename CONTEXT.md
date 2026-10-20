@@ -15,10 +15,12 @@
 - 合并后全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
 - Nature Figure PDF 审查已按 Apache-2.0、固定 commit 与字节哈希引入。Python PDF 默认报告审查状态。
 - Plotly 通用碰撞计数仍为 `null`。通用碰撞检测、全部图形自动视觉审查与完整 Skill 发布尚未完成。
+- 2026-10-20：独立几何验收与约束重排设计稿已形成，待用户审阅；尚无对应实施计划，程序未改动。
 
 ## 下一步
-1. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
-2. 完成 Task 11：配置 Windows/Linux CI，审查完整历史与许可，再决定是否发布。
+1. 审阅新的几何验收设计稿；批准后再编写独立实施计划。
+2. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
+3. 完成 Task 11：配置 Windows/Linux CI，审查完整历史与许可，再决定是否发布。
 
 ## 用户约束
 - Skill 程序代码只放在该 Skill 的 `scripts/` 内。
@@ -40,6 +42,7 @@
 
 ## 文件入口
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`
+- `docs/superpowers/specs/2026-10-20-figure-geometry-qa-design.md`：待审阅设计。
 - `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`
 - `skills/figure-infrastructure/references/capability-matrix.md`
 - `skills/figure-infrastructure/tests/python/test_chart_families.py`

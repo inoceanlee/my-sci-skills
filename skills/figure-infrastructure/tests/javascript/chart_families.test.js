@@ -25,8 +25,8 @@ const families={
   violin:[{type:"violin",y:[.2,.4,.5,.7,.8,1.2,1.3,.4],name:"Density",box:{visible:true}}],
   box:[{type:"box",y:[1,2,3,2,4,5,3,2],name:"Quartiles"}],
   histogram:[{type:"histogram",x:[0,1,1,2,2,3,3,3,4]}],
-  heatmap:[{type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],colorbar:{title:{text:"Value"}}}],
-  contour:[{type:"contour",z:[[0,1,2],[1,3,2],[2,0,1]],colorbar:{title:{text:"Intensity"}}}]
+  heatmap:[{type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],colorbar:{len:.75,title:{text:"Value",side:"right"}}}],
+  contour:[{type:"contour",z:[[0,1,2],[1,3,2],[2,0,1]],colorbar:{len:.75,title:{text:"Intensity",side:"right"}}}]
 };
 const expectedText={
   line:["Distance (m)","Signal amplitude","Signal series","Reference series"],
@@ -39,6 +39,17 @@ const expectedText={
   histogram:["Observed value","Count"],
   heatmap:["Column","Row","Value"],
   contour:["Column","Row","Intensity"]
+};
+const expectedAuditStatus={
+  line:"passed",scatter:"passed",bar:"passed",heatmap:"passed",
+  pie:"not_auditable",donut:"not_auditable",violin:"not_auditable",
+  box:"not_auditable",histogram:"not_auditable",contour:"not_auditable"
+};
+const expectedAuditRoles={
+  line:["axis_title","data_line","legend","legend_text","tick_label"],
+  scatter:["axis_title","data_marker","legend","legend_text","tick_label"],
+  bar:["axis_title","data_bar","tick_label"],
+  heatmap:["axis_title","colorbar","colorbar_text","data_field","tick_label"]
 };
 const familyLayouts={
   line:{showlegend:true,xaxis:{title:{text:"Distance (m)"}},yaxis:{title:{text:"Signal amplitude"}}},
@@ -71,26 +82,45 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
         },familyLayouts[kind]));
         const before=JSON.stringify({data:node.data,layout:node.layout});
         const rows=[];
-        for(const preset of ["single","double"]){
+      for(const preset of ["single","double"]){
+        let stage="preserve";
+        try {
           const preserved=await window.exportScientificFigure(node,{
             format:"png",preset,layoutPolicy:{mode:"preserve"}
           });
+          stage="compact-png";
           const png=await window.exportScientificFigure(node,{format:"png",preset});
+          stage="compact-svg";
           const svg=await window.exportScientificFigure(node,{format:"svg",preset});
           rows.push({
-            kind,preset,pngDataUrl:png.dataUrl,svgDataUrl:svg.dataUrl,
+            kind,preset,preservedDataUrl:preserved.dataUrl,
+            pngDataUrl:png.dataUrl,svgDataUrl:svg.dataUrl,
             pngLength:png.dataUrl.length,svgLength:svg.dataUrl.length,
             width:png.width,height:png.height,
             preservedPlotArea:preserved.audit.layoutMetrics.plotAreaFraction,
             compactPlotArea:png.audit.layoutMetrics.plotAreaFraction,
             pngClipping:png.audit.layoutMetrics.clippingCount,
             svgClipping:svg.audit.layoutMetrics.clippingCount,
+            geometryStatus:png.audit.geometryStatus,
+            auditPassed:png.audit.passed,
+            auditedRoles:png.audit.auditedRoles,
+            collisionCount:png.audit.layoutMetrics.collisionCount,
+            svgGeometryStatus:svg.audit.geometryStatus,
+            svgAuditedRoles:svg.audit.auditedRoles,
+            remaining:document.querySelectorAll("[data-sci-export]").length
+          });
+        } catch(error) {
+          rows.push({
+            kind,preset,
+            error:{stage,code:error.code,message:error.message,details:error.details},
+            colorbarInput:node.data[0]?.colorbar,
             remaining:document.querySelectorAll("[data-sci-export]").length
           });
         }
-        const sourceUnchanged=before===JSON.stringify({data:node.data,layout:node.layout});
-        output.push(...rows.map(row=>({...row,sourceUnchanged})));
       }
+      const sourceUnchanged=before===JSON.stringify({data:node.data,layout:node.layout});
+      output.push(...rows.map(row=>({...row,sourceUnchanged})));
+    }
       return output;
     },{families,familyLayouts});
     const visualOutput=process.env.SCI_VISUAL_OUTPUT_DIR;
@@ -106,11 +136,28 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
     for(const row of result){
       const label=`${row.kind} ${row.preset}`;
       const [width,height]=row.preset==="single"?[1004,709]:[2126,1241];
+      assert.ok(!row.error, `${label}: ${JSON.stringify({
+        error:row.error,colorbarInput:row.colorbarInput
+      })}`);
       assert.ok(row.sourceUnchanged,label);
       assert.ok(row.pngLength>2000,label);
       assert.ok(row.svgLength>1000,label);
       assert.deepEqual([row.width,row.height],[width,height],label);
       assert.equal(row.pngClipping,0,label);
+      assert.equal(row.geometryStatus,expectedAuditStatus[row.kind],label);
+      assert.equal(row.svgGeometryStatus,row.geometryStatus,label);
+      assert.deepEqual(
+        [...row.svgAuditedRoles].sort(),[...row.auditedRoles].sort(),label
+      );
+      if(row.geometryStatus==="passed"){
+        assert.equal(row.auditPassed,true,label);
+        for(const role of expectedAuditRoles[row.kind]){
+          assert.ok(row.auditedRoles.includes(role),`${label}: missing ${role}`);
+        }
+      }else{
+        assert.equal(row.auditPassed,false,label);
+        assert.equal(row.collisionCount,null,label);
+      }
       assert.ok(
         row.compactPlotArea > row.preservedPlotArea + 0.05,
         `${label}: compact=${row.compactPlotArea}, preserved=${row.preservedPlotArea}`
@@ -128,8 +175,17 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
       assert.match(svgText,new RegExp(`width="${row.preset==="single"?"85":"180"}\\.`),label);
       assert.match(svgText,new RegExp(`height="${row.preset==="single"?"60":"105"}\\.`),label);
       if(visualOutput){
-        fs.writeFileSync(path.join(visualOutput,`${row.kind}-${row.preset}.png`),pngBytes);
-        fs.writeFileSync(path.join(visualOutput,`${row.kind}-${row.preset}.svg`),dataUrlBuffer(row.svgDataUrl));
+        fs.writeFileSync(
+          path.join(visualOutput,`${row.kind}-${row.preset}-preserve.png`),
+          dataUrlBuffer(row.preservedDataUrl)
+        );
+        fs.writeFileSync(
+          path.join(visualOutput,`${row.kind}-${row.preset}-compact.png`),pngBytes
+        );
+        fs.writeFileSync(
+          path.join(visualOutput,`${row.kind}-${row.preset}.svg`),
+          dataUrlBuffer(row.svgDataUrl)
+        );
       }
     }
     assert.equal(result.length,20);
@@ -139,8 +195,83 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
   }
 });
 
+test("compact retries default-length colorbar after measured clearance failure",async()=>{
+  const browser=await chromium.launch({executablePath:browserExe,headless:true});
+  try{
+    const page=await browser.newPage();
+    await page.goto(pageURL);
+    await page.evaluate(()=>window.ready);
+    const result=await page.evaluate(async()=>{
+      const node=document.createElement("div");
+      node.style.cssText="width:1004px;height:709px";
+      document.body.appendChild(node);
+      await Plotly.newPlot(node,[{
+        type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],
+        colorbar:{title:{text:"Value",side:"right"}}
+      }],{
+        margin:{l:220,r:220,t:180,b:180,pad:0},
+        xaxis:{title:{text:"Column"}},yaxis:{title:{text:"Row"}},
+        showlegend:false
+      });
+      const before=JSON.stringify({data:node.data,layout:node.layout});
+      const exported=await window.exportScientificFigure(node,{format:"png"});
+      const after=JSON.stringify({data:node.data,layout:node.layout});
+      return {before,after,exported};
+    });
+    assert.equal(result.before,result.after);
+    assert.equal(result.exported.audit.geometryStatus,"passed");
+    assert.equal(result.exported.audit.passed,true);
+    assert.ok(result.exported.dataUrl.startsWith("data:image/png;base64,"));
+  }finally{
+    await browser.close();
+  }
+});
 
-test("Plotly compact layout reduces each injected gap independently",async()=>{
+test("compact rejects intrinsic default colorbar title collision",async()=>{
+  const browser=await chromium.launch({executablePath:browserExe,headless:true});
+  try{
+    const page=await browser.newPage();
+    await page.goto(pageURL);
+    await page.evaluate(()=>window.ready);
+    const result=await page.evaluate(async()=>{
+      const node=document.createElement("div");
+      node.style.cssText="width:1004px;height:709px";
+      document.body.appendChild(node);
+      await Plotly.newPlot(node,[{
+        type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],
+        colorbar:{title:{text:"Value"}}
+      }],{
+        margin:{l:220,r:220,t:180,b:180,pad:0},
+        xaxis:{title:{text:"Column"}},yaxis:{title:{text:"Row"}},
+        showlegend:false
+      });
+      const before=JSON.stringify({data:node.data,layout:node.layout});
+      try{
+        const exported=await window.exportScientificFigure(node,{format:"png"});
+        return {unexpectedDataUrl:Boolean(exported.dataUrl),before,
+          after:JSON.stringify({data:node.data,layout:node.layout})};
+      }catch(error){
+        return {code:error.code,details:error.details,before,
+          after:JSON.stringify({data:node.data,layout:node.layout})};
+      }finally{
+        Plotly.purge(node);
+        node.remove();
+      }
+    });
+    assert.equal(result.code,"GEOMETRY_CONFLICT",JSON.stringify(result));
+    assert.ok(result.details.some(issue =>
+      issue.code==="GEOMETRY_COLLISION" &&
+      issue.elementIds.some(id=>id.startsWith("colorbar:text:"))
+    ),JSON.stringify(result.details));
+    assert.equal(result.before,result.after);
+    assert.equal(result.unexpectedDataUrl,undefined);
+  }finally{
+    await browser.close();
+  }
+});
+
+
+test("compact reduces fixable gaps and rejects fixed colorbar conflicts",async()=>{
   const browser=await chromium.launch({executablePath:browserExe,headless:true});
   try{
     const page=await browser.newPage();
@@ -176,9 +307,10 @@ test("Plotly compact layout reduces each injected gap independently",async()=>{
         },
         {
           name:"colorbar",
+          expectConflict:true,
           data:[{
             type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],
-            colorbar:{x:1.8,title:{text:"Value"}}
+            colorbar:{x:1.8,len:1,title:{text:"Value"}}
           }],
           layout:{showlegend:false}
         }
@@ -194,11 +326,30 @@ test("Plotly compact layout reduces each injected gap independently",async()=>{
       for(const scenario of cases){
         const node=document.getElementById("plot");
         await Plotly.newPlot(node,scenario.data,scenario.layout);
-        const preserved=await window.exportScientificFigure(node,{
-          format:"png",preset:"single",layoutPolicy:{mode:"preserve"}
+        const before=window.ScientificFigureLayout.measurePlotlyLayout(node,{
+          widthPx:1004,heightPx:709,dpi:300
         });
-        const compact=await window.exportScientificFigure(node,{format:"png",preset:"single"});
-        const before=preserved.audit.layoutMetrics;
+        let compact;
+        try {
+          compact=await window.exportScientificFigure(node,{format:"png",preset:"single"});
+        } catch(error) {
+          const colorbarConflict = error.code === "GEOMETRY_CONFLICT" &&
+            error.details?.some(issue =>
+              issue.elementIds.some(id => id.startsWith("colorbar:"))
+            );
+          if (!scenario.expectConflict || !colorbarConflict) {
+            failures.push(`${scenario.name}: ${JSON.stringify({
+              code:error.code,details:error.details
+            })}`);
+          }
+          Plotly.purge(node);
+          continue;
+        }
+        if (scenario.expectConflict) {
+          failures.push(`${scenario.name}: fixed conflict unexpectedly passed`);
+          Plotly.purge(node);
+          continue;
+        }
         const after=compact.audit.layoutMetrics;
         if(scenario.name==="outer margins"){
           for(const [index,side] of ["left","right","bottom","top"].entries()){

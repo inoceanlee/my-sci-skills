@@ -209,10 +209,10 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - `audit` 增加 `geometryStatus, geometryIssues, auditedRoles`。失败 `Error.code / Error.details`，可诊断对象 IDs。
 - `PlotlyLayoutPlanner` 产生候选布局，`ScientificFigureExporter.export` 负责重渲染、标注、审查、导出和清理。
 
-- [ ] **Step 1：失败测试。** 构造曲线被图例覆盖、热力色条与标题冲突、保护区冲突、无解长标注，断言最多五轮；原始 `data/layout/range`、下载行为和页面状态不改变。
-- [ ] **Step 2：红测。** 运行 `node --test skills/figure-infrastructure/tests/javascript/browser.test.js skills/figure-infrastructure/tests/javascript/geometry.test.js`，确认新验收要求失败。
-- [ ] **Step 3：实现。** 从临时 DOM 创建候选；优先用 Plotly 原生布局参数，再用审核后的实际几何微调。每轮重新放置必要标签并重新测量。通过后调用 `Plotly.toImage`；SVG 校验 viewBox/文本、PNG 校验尺寸与非空。失败不返回成功 `dataUrl`，所有路径执行 `Plotly.purge(node)`。
-- [ ] **Step 4：绿测。** `compact` 自动修复、`preserve` 不修改、`legend=fixed` 保留、`not_auditable` 如实返回。断网、单/双栏 PNG/SVG 和源 Plotly 状态不变。图例不得为了腾空而消失或缩成不可读。
+- [x] **Step 1：失败测试。** 构造曲线被图例覆盖、热力色条与标题冲突、保护区冲突、无解长标注，断言最多五轮；原始 `data/layout/range`、下载行为和页面状态不改变。
+- [x] **Step 2：红测。** 运行 `node --test skills/figure-infrastructure/tests/javascript/browser.test.js skills/figure-infrastructure/tests/javascript/geometry.test.js`，确认新验收要求失败。
+- [x] **Step 3：实现。** 从临时 DOM 创建候选；优先用 Plotly 原生布局参数，再用审核后的实际几何微调。每轮重新放置必要标签并重新测量。通过后调用 `Plotly.toImage`；SVG 校验 viewBox/文本、PNG 校验尺寸与非空。失败不返回成功 `dataUrl`，所有路径执行 `Plotly.purge(node)`。
+- [x] **Step 4：绿测。** `compact` 自动修复、`preserve` 不修改、`legend=fixed` 保留、`not_auditable` 如实返回。断网、单/双栏 PNG/SVG 和源 Plotly 状态不变。图例不得为了腾空而消失或缩成不可读。
 - [ ] **Step 5：复审、提交。** 全 JS 测试通过；浏览器实际读取并放大最终两类图片。提交 `feat(figure): gate plotly exports on geometry`。
 - **回滚：**仅回退候选布局/导出流程，不影响 Python 或原雷达报告。
 

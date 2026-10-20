@@ -36,6 +36,10 @@ test("offline PNG and SVG export preserves source Plotly state", async () => {
     });
     assert.equal(data.before, data.after);
     assert.equal(data.remaining, 0);
+    assert.equal(data.png.audit.geometryStatus, "passed");
+    assert.equal(data.png.audit.passed, true);
+    assert.equal(data.png.audit.layoutMetrics.collisionCount, 0);
+    assert.ok(data.png.audit.auditedRoles.includes("data_line"));
     assert.equal(data.png.width,1004);
     assert.equal(data.png.height,709);
     assert.ok(data.png.audit.layoutMetrics.axisTitleGapsPt.x >= 3);
@@ -56,6 +60,113 @@ test("offline PNG and SVG export preserves source Plotly state", async () => {
     assert.match(svgText,/height="105\./);
     assert.match(svgText,/viewBox=/);
     assert.deepEqual(network, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("Plotly cleanup errors preserve export outcome and are reported", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const originalPurge = Plotly.purge;
+      const originalToImage = Plotly.toImage;
+      Plotly.purge = () => { throw new Error("cleanup failure"); };
+      try {
+        Plotly.toImage = async () => { throw new Error("render failure"); };
+        let failed;
+        try {
+          await window.exportScientificFigure(document.getElementById("plot"), {
+            format:"png"
+          });
+          failed = {unexpectedSuccess:true};
+        } catch (error) {
+          failed = {
+            message:error.message,
+            cleanupMessage:error.cleanupError?.message
+          };
+        }
+        Plotly.toImage = originalToImage;
+        const succeeded = await window.exportScientificFigure(
+          document.getElementById("plot"), {format:"png"}
+        );
+        return {
+          failed,
+          succeeded:Boolean(succeeded.dataUrl),
+          cleanupWarnings:succeeded.audit.cleanupWarnings
+        };
+      } finally {
+        Plotly.purge = originalPurge;
+        Plotly.toImage = originalToImage;
+      }
+    });
+    assert.deepEqual(result.failed, {
+      message:"render failure",cleanupMessage:"cleanup failure"
+    });
+    assert.equal(result.succeeded,true);
+    assert.deepEqual(result.cleanupWarnings, [{
+      code:"PLOT_CLEANUP_FAILED",message:"cleanup failure"
+    }]);
+  } finally {
+    await browser.close();
+  }
+});
+
+
+test("preserve rejects data occlusion and compact layout recovers", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const graph = document.createElement("div");
+      graph.style.cssText = "width:1004px;height:709px";
+      document.body.appendChild(graph);
+      await Plotly.newPlot(graph, [{
+        type:"scatter", mode:"lines", x:[0,1], y:[.5,.5], name:"Signal"
+      }], {
+        width:1004, height:709, showlegend:true, transition:{duration:0},
+        legend:{x:.5,y:.5,xanchor:"center",yanchor:"middle"},
+        xaxis:{range:[0,1]}, yaxis:{range:[0,1]}
+      });
+      let preserved;
+      try {
+        await window.exportScientificFigure(graph, {
+          format:"png", layoutPolicy:{mode:"preserve"}
+        });
+        preserved = {code:null, details:null, dataUrl:true};
+      } catch (error) {
+        preserved = {
+          code:error.code, details:error.details,
+          dataUrl:Boolean(error.dataUrl)
+        };
+      }
+      try {
+      let compact;
+      try {
+        compact = await window.exportScientificFigure(graph, {format:"png"});
+      } catch (error) {
+        compact = {error:{code:error.code,details:error.details,message:error.message}};
+      }
+      return {preserved, compact};
+      } finally {
+        Plotly.purge(graph);
+        graph.remove();
+      }
+    });
+    assert.equal(result.preserved.code, "GEOMETRY_CONFLICT");
+    assert.equal(result.preserved.dataUrl, false);
+    assert.ok(result.preserved.details.some(issue => issue.code === "DATA_OCCLUSION"));
+    assert.ok(result.compact.audit, JSON.stringify(result.compact));
+    assert.equal(result.compact.audit.geometryStatus, "passed");
+    assert.equal(result.compact.audit.passed, true);
+    assert.equal(result.compact.audit.layoutMetrics.collisionCount, 0);
+    assert.ok(!result.compact.audit.issues.includes("CLEARANCE_VIOLATION"));
+    assert.ok(result.compact.dataUrl.startsWith("data:image/png;base64,"));
   } finally {
     await browser.close();
   }

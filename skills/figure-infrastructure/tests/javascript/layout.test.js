@@ -1,7 +1,8 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {prepareCompactLayout} = require("../../scripts/javascript/layout.js");
+const {candidatePlotlyLayouts, prepareCompactLayout, adjustPlotlyLayoutForGeometry} = require("../../scripts/javascript/layout.js");
+const {ScientificFigureExporter} = require("../../scripts/javascript/figure-layout.js");
 
 test("compact mode reduces all excessive margins and axis title standoff", () => {
   const source = {
@@ -27,6 +28,74 @@ test("preserve and explicit fixed legend leave manual layout intact", () => {
   assert.deepEqual(prepareCompactLayout(source,{mode:"preserve"}),source);
   const fixed=prepareCompactLayout(source,{mode:"compact",legend:"fixed"});
   assert.equal(fixed.legend.x,1.6);
+});
+
+test("candidate layouts are capped and preserve mode remains single-pass", () => {
+  const source = {
+    showlegend:true, legend:{x:.5,y:.5,orientation:"v"},
+    xaxis:{range:[0,1]}, yaxis:{range:[0,1]}
+  };
+  const preset = {widthPx:1004,heightPx:709,dpi:300};
+  const candidates = candidatePlotlyLayouts(
+    source,{mode:"compact"},preset,true
+  );
+  const preserved = candidatePlotlyLayouts(
+    source,{mode:"preserve"},preset,true
+  );
+
+  assert.ok(candidates.length <= 5);
+  assert.ok(candidates.some(layout => layout.legend.orientation === "h"));
+  assert.ok(candidates.some(layout => layout.legend.orientation === "v"));
+  assert.equal(preserved.length,1);
+  assert.deepEqual(preserved[0],source);
+});
+
+test("geometry adjustment expands only affected canvas margins", () => {
+  const source = {margin:{l:50,r:35,t:95,b:50}};
+  const issues = [{
+    code:"CLEARANCE_VIOLATION",
+    elementIds:["tick:y:1","canvas:left"],
+    rectsPt:[[3,40,10,7]],
+    gapDeficitPt:3
+  }];
+  const adjusted = adjustPlotlyLayoutForGeometry(
+    source,issues,{widthPx:1004,heightPx:709,dpi:300}
+  );
+  assert.ok(adjusted.margin.l > source.margin.l);
+  assert.equal(adjusted.margin.r,source.margin.r);
+  assert.equal(adjusted.margin.t,source.margin.t);
+  assert.equal(adjusted.margin.b,source.margin.b);
+  assert.equal(source.margin.l,50);
+});
+
+test("colorbar length candidates adjust implicit and explicit defaults only", () => {
+  const preset={widthPx:1004,heightPx:709,dpi:300};
+  const issue={
+    code:"CLEARANCE_VIOLATION",
+    elementIds:["colorbar:1","tick:x:6"],
+    gapDeficitPt:2.2
+  };
+  const source=[{type:"heatmap"}];
+  const fullData=[{
+    type:"heatmap",showscale:true,
+    colorbar:{_traceIndex:0,len:1,lenmode:"fraction"}
+  }];
+  const candidate=ScientificFigureExporter.shortenDefaultColorbarForClearance(
+    source,fullData,[issue],preset,500
+  );
+  assert.ok(candidate[0].colorbar.len < 1);
+  assert.equal(Object.hasOwn(source[0],"colorbar"),false);
+  assert.notEqual(candidate,source);
+  assert.equal(
+    ScientificFigureExporter.shortenDefaultColorbarForClearance(
+      [{type:"heatmap",colorbar:{len:1}}],fullData,[issue],preset,500
+    ),null
+  );
+  assert.equal(
+    ScientificFigureExporter.shortenDefaultColorbarForClearance(
+      [{type:"heatmap",colorbar:{lenmode:"pixels"}}],fullData,[issue],preset,500
+    ),null
+  );
 });
 
 test("unknown layout mode fails clearly", () => {

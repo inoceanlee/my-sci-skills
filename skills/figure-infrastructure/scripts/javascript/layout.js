@@ -41,9 +41,10 @@
         layout[key] = axis;
       }
       if (legendMode !== "fixed") {
-        layout.legend = Object.assign({}, layout.legend || {}, {
-          x: 1, y: 1.040, xanchor: "right", yanchor: "bottom",
-          orientation: "h",
+        const legendPosition = legendMode === "inside"
+          ? {x:1,y:1,xanchor:"right",yanchor:"top",orientation:"v"}
+          : {x:1,y:1.040,xanchor:"right",yanchor:"bottom",orientation:"h"};
+        layout.legend = Object.assign({}, layout.legend || {}, legendPosition, {
           font: Object.assign({}, layout.legend?.font || {}, {
             size: Math.max(layout.legend?.font?.size || 0, 28)
           })
@@ -51,6 +52,78 @@
       }
       if(protectedAreas.length)this.excludeProtectedAreas(layout,protectedAreas,preset);
       return layout;
+    }
+
+    static candidates(original, policy = {}, preset = null, hasLegend = true) {
+      const mode = policy.mode || "compact";
+      const requestedLegend = policy.legend || "auto";
+      const modes = [requestedLegend];
+      if (mode !== "preserve" && requestedLegend !== "fixed" && hasLegend) {
+        modes.push("outside", "inside", "auto");
+      }
+      const candidates = [];
+      const seen = new Set();
+      for (const legend of modes) {
+        const key = legend === "inside" ? "inside" :
+          legend === "fixed" ? "fixed" : "outside";
+        if (seen.has(key)) continue;
+        seen.add(key);
+        candidates.push(this.prepare(
+          original, Object.assign({}, policy, {legend}), preset
+        ));
+        if (candidates.length === 5) break;
+      }
+      return candidates;
+    }
+
+    static adjustForGeometry(
+      layout, issues, preset, protectedAreas = [], resolvedSize = null
+    ) {
+      const widthPt = preset.widthPx * 72 / preset.dpi;
+      const heightPt = preset.heightPx * 72 / preset.dpi;
+      const margin = Object.assign({}, layout.margin || {});
+      const marginKeys = {left:"l",right:"r",top:"t",bottom:"b"};
+      if (resolvedSize) {
+        for (const key of ["l","r","t","b"]) {
+          if (Number.isFinite(resolvedSize[key])) margin[key] = resolvedSize[key];
+        }
+        margin.autoexpand = false;
+      }
+      let changed = false;
+      for (const item of issues) {
+        if (item.code !== "CLEARANCE_VIOLATION" &&
+            item.code !== "GEOMETRY_CLIPPING") continue;
+        const rect = item.rectsPt?.[0];
+        if (!rect || rect.length !== 4) continue;
+        const [x,y,w,h] = rect;
+        const sides = item.elementIds
+          .filter(id => id.startsWith("canvas:"))
+          .map(id => id.slice("canvas:".length));
+        if (item.code === "GEOMETRY_CLIPPING") {
+          if (x < 0) sides.push("left");
+          if (x + w > widthPt) sides.push("right");
+          if (y < 0) sides.push("top");
+          if (y + h > heightPt) sides.push("bottom");
+        }
+        for (const side of new Set(sides)) {
+          const gap = side === "left" ? x :
+            side === "right" ? widthPt - x - w :
+            side === "top" ? y : heightPt - y - h;
+          const deficit = Math.max(item.gapDeficitPt || 0, 6 - gap);
+          if (deficit <= .25) continue;
+          const key = marginKeys[side];
+          if (!key) continue;
+          margin[key] = (Number(margin[key]) || 0) +
+            deficit * preset.dpi / 72 + 1;
+          changed = true;
+        }
+      }
+      if (!changed) return null;
+      const adjusted = Object.assign({}, layout, {margin});
+      if (protectedAreas.length) {
+        this.excludeProtectedAreas(adjusted, protectedAreas, preset);
+      }
+      return adjusted;
     }
     static excludeProtectedAreas(layout,areas,preset){
       const width=Number(preset?.widthPx??layout.width);
@@ -156,11 +229,21 @@
   }
 
   const prepareCompactLayout = (layout,policy,preset) => PlotlyLayoutPlanner.prepare(layout,policy,preset);
+  const candidatePlotlyLayouts = (layout,policy,preset,hasLegend) =>
+    PlotlyLayoutPlanner.candidates(layout,policy,preset,hasLegend);
+  const adjustPlotlyLayoutForGeometry = (layout,issues,preset,areas,resolvedSize) =>
+    PlotlyLayoutPlanner.adjustForGeometry(layout,issues,preset,areas,resolvedSize);
   const measurePlotlyLayout = (node,preset) => PlotlyLayoutPlanner.measure(node,preset);
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = {PlotlyLayoutPlanner, prepareCompactLayout, measurePlotlyLayout};
+    module.exports = {
+      PlotlyLayoutPlanner, prepareCompactLayout, candidatePlotlyLayouts,
+      adjustPlotlyLayoutForGeometry, measurePlotlyLayout
+    };
   }
   if (typeof window !== "undefined") {
-    root.ScientificFigureLayout = {prepareCompactLayout, measurePlotlyLayout};
+    root.ScientificFigureLayout = {
+      prepareCompactLayout, candidatePlotlyLayouts,
+      adjustPlotlyLayoutForGeometry, measurePlotlyLayout
+    };
   }
 })(typeof window !== "undefined" ? window : {});

@@ -9,17 +9,16 @@
 - `py-infrastructure` 原样迁入 12 个文件，SHA-256 一致；公开 API 合同测试通过。
 - `figure-infrastructure` 已实现范围策略、单双栏尺寸、Matplotlib/Seaborn 与 Plotly.js 导出和布局。
 - Python 隔离环境使用 Python 3.13.16 与 `uv.lock` 的 24 个包。未修改全局环境。
-- Task 9 已覆盖 16 类 Python 图形的单双栏 PNG/SVG/PDF 导出，以及 10 类 Plotly 图形的单双栏 PNG/SVG 导出。
-- 独立复审指出留白验收断言不完整；已补测轴标题、四边外边距、图例和色条。Plotly 断言先检查指标为有限数值，防止缺失值被误判为收缩；布局实现本身通过。
-- Python 16 类与 Plotly 10 类图表的单/双栏样图已重新读取；未见新的遮挡、裁切或图例问题。
-- 当前全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
+- Task 9 的 16 类 Python 与 10 类 Plotly 图表覆盖及独立留白验收已完成并合入 `main`（`cb230f6`）。
+- Python 与 Plotly 留白回归分别比较轴标题、四边外边距、图例和色条；Plotly 先验证指标有限，再比较收缩。布局通过这些验收。
+- Python 16 类与 Plotly 10 类图表的单/双栏样图已视觉审查，标签、图例和色条均清晰且未裁切。
+- 合并后全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
 - Nature Figure PDF 审查已按 Apache-2.0、固定 commit 与字节哈希引入。Python PDF 默认报告审查状态。
 - Plotly 通用碰撞计数仍为 `null`。通用碰撞检测、全部图形自动视觉审查与完整 Skill 发布尚未完成。
 
 ## 下一步
-1. 完成 Task 9 复审、提交、合入 `main`，并验证合并结果、清理任务分支。
-2. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
-3. 完成 Task 11：配置 Windows/Linux CI，审查完整历史与许可，再决定是否发布。
+1. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
+2. 完成 Task 11：配置 Windows/Linux CI，审查完整历史与许可，再决定是否发布。
 
 ## 用户约束
 - Skill 程序代码只放在该 Skill 的 `scripts/` 内。

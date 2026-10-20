@@ -217,3 +217,84 @@ def test_compact_layout_recovers_each_family_after_gap_injection(kind):
         with Image.open(compact.path) as image:
             assert ImageStat.Stat(image.convert("L")).stddev[0] > 2, kind
     plt.close(fig)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_compact_layout_reduces_each_outer_margin_after_margin_injection(kind):
+    fig = make_chart(kind)
+    fig.subplots_adjust(left=.42, right=.57, bottom=.42, top=.58)
+    with TemporaryDirectory() as temp:
+        exporter = FigureExporter()
+        before = exporter.export(
+            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
+            layout_policy=LayoutPolicy(mode="preserve"),
+        ).audit.layout_metrics
+        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        after = compact.audit.layout_metrics
+        for side, old, new in zip(
+            ("left", "right", "bottom", "top"),
+            before.outer_gaps_pt, after.outer_gaps_pt,
+        ):
+            assert abs(new) < abs(old), f"{kind} {side}: before={old}, after={new}"
+        assert after.clipping_count == 0, (kind, compact.audit.issues)
+    plt.close(fig)
+
+
+@pytest.mark.parametrize("kind", ("line", "band", "scatter", "bubble"))
+def test_compact_layout_reduces_legend_gap_after_legend_injection(kind):
+    fig = make_chart(kind)
+    legend = fig.axes[0].get_legend()
+    legend.set_bbox_to_anchor((1.75, 1.15), transform=fig.axes[0].transAxes)
+    with TemporaryDirectory() as temp:
+        exporter = FigureExporter()
+        before = exporter.export(
+            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
+            layout_policy=LayoutPolicy(mode="preserve"),
+        ).audit.layout_metrics.legend_plot_gap_pt
+        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        after = compact.audit.layout_metrics.legend_plot_gap_pt
+        assert after < before, f"{kind}: before={before}, after={after}"
+        assert compact.audit.layout_metrics.clipping_count == 0, kind
+    plt.close(fig)
+
+
+@pytest.mark.parametrize("kind", tuple(kind for kind in KINDS if kind not in ("pie", "donut")))
+def test_compact_layout_reduces_axis_title_gaps_after_labelpad_injection(kind):
+    fig = make_chart(kind)
+    ax = fig.axes[0]
+    if ax.get_xlabel():
+        ax.xaxis.labelpad = 45
+    if ax.get_ylabel():
+        ax.yaxis.labelpad = 40
+    with TemporaryDirectory() as temp:
+        exporter = FigureExporter()
+        before = exporter.export(
+            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
+            layout_policy=LayoutPolicy(mode="preserve"),
+        ).audit.layout_metrics.axis_title_gaps_pt
+        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        after = compact.audit.layout_metrics.axis_title_gaps_pt
+        for axis in ("x", "y"):
+            assert before[axis] is not None, f"{kind} {axis} title missing"
+            assert after[axis] is not None and after[axis] < before[axis], (
+                kind, axis, before[axis], after[axis]
+            )
+    plt.close(fig)
+
+
+@pytest.mark.parametrize("kind", ("heatmap", "correlation", "contour"))
+def test_compact_layout_reduces_colorbar_gap_after_colorbar_injection(kind):
+    fig = make_chart(kind)
+    for colorbar in fig.axes[1:]:
+        colorbar.set_position((.90, .40, .025, .20))
+    with TemporaryDirectory() as temp:
+        exporter = FigureExporter()
+        before = exporter.export(
+            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
+            layout_policy=LayoutPolicy(mode="preserve"),
+        ).audit.layout_metrics.colorbar_plot_gap_pt
+        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        after = compact.audit.layout_metrics.colorbar_plot_gap_pt
+        assert after < before, f"{kind}: before={before}, after={after}"
+        assert compact.audit.layout_metrics.clipping_count == 0, kind
+    plt.close(fig)

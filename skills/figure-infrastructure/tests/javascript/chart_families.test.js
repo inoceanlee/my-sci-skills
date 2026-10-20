@@ -67,7 +67,7 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
         const node=document.getElementById("plot");
         await Plotly.newPlot(node,data,Object.assign({
           title:"",margin:{l:220,r:220,t:180,b:180,pad:0},
-          legend:{x:1.8,y:1.3}
+          legend:{x:1,y:1.04}
         },familyLayouts[kind]));
         const before=JSON.stringify({data:node.data,layout:node.layout});
         const rows=[];
@@ -134,6 +134,95 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
     }
     assert.equal(result.length,20);
     assert.deepEqual(outside,[]);
+  }finally{
+    await browser.close();
+  }
+});
+
+
+test("Plotly compact layout reduces each injected gap independently",async()=>{
+  const browser=await chromium.launch({executablePath:browserExe,headless:true});
+  try{
+    const page=await browser.newPage();
+    await page.goto(pageURL);
+    await page.evaluate(()=>window.ready);
+    const failures=await page.evaluate(async()=>{
+      const cases=[
+        {
+          name:"outer margins",
+          data:[{type:"scatter",mode:"lines",x:[0,1,2],y:[1,3,2]}],
+          layout:{showlegend:false,margin:{l:220,r:220,t:180,b:180,pad:0}}
+        },
+        {
+          name:"axis titles",
+          data:[{type:"scatter",mode:"lines",x:[0,1,2],y:[1,3,2]}],
+          layout:{
+            showlegend:false,
+            xaxis:{title:{text:"Distance (m)",standoff:200}},
+            yaxis:{title:{text:"Signal amplitude",standoff:200}}
+          }
+        },
+        {
+          name:"legend",
+          data:[
+            {type:"scatter",mode:"lines",x:[0,1,2],y:[1,3,2],name:"Signal"},
+            {type:"scatter",mode:"lines",x:[0,1,2],y:[2,2,1],name:"Reference"}
+          ],
+          layout:{
+            showlegend:true,legend:{x:1.8,y:1.3},
+            xaxis:{title:{text:"Distance (m)"}},
+            yaxis:{title:{text:"Signal amplitude"}}
+          }
+        },
+        {
+          name:"colorbar",
+          data:[{
+            type:"heatmap",z:[[0,1,2],[1,3,2],[2,0,1]],
+            colorbar:{x:1.8,title:{text:"Value"}}
+          }],
+          layout:{showlegend:false}
+        }
+      ];
+      const failures=[];
+      const requireDecrease=(name,beforeValue,afterValue)=>{
+        if(!Number.isFinite(beforeValue)||!Number.isFinite(afterValue)){
+          failures.push(`${name}: missing finite metric; before=${beforeValue}, after=${afterValue}`);
+        }else if(!(afterValue<beforeValue)){
+          failures.push(`${name}: before=${beforeValue}, after=${afterValue}`);
+        }
+      };
+      for(const scenario of cases){
+        const node=document.getElementById("plot");
+        await Plotly.newPlot(node,scenario.data,scenario.layout);
+        const preserved=await window.exportScientificFigure(node,{
+          format:"png",preset:"single",layoutPolicy:{mode:"preserve"}
+        });
+        const compact=await window.exportScientificFigure(node,{format:"png",preset:"single"});
+        const before=preserved.audit.layoutMetrics;
+        const after=compact.audit.layoutMetrics;
+        if(scenario.name==="outer margins"){
+          for(const [index,side] of ["left","right","bottom","top"].entries()){
+            const oldGap=before.outerGapsPt[index];
+            const newGap=after.outerGapsPt[index];
+            if(!Number.isFinite(oldGap)||!Number.isFinite(newGap)){
+              failures.push(`${side} margin: missing finite metric; before=${oldGap}, after=${newGap}`);
+            }else if(!(Math.abs(newGap)<Math.abs(oldGap))){
+              failures.push(`${side} margin: before=${oldGap}, after=${newGap}`);
+            }
+          }
+        }else if(scenario.name==="axis titles"){
+          for(const axis of ["x","y"]){
+            requireDecrease(`${axis} title`,before.axisTitleGapsPt[axis],after.axisTitleGapsPt[axis]);
+          }
+        }else{
+          const metric=scenario.name==="legend"?"legendPlotGapPt":"colorbarPlotGapPt";
+          requireDecrease(scenario.name,before[metric],after[metric]);
+        }
+        Plotly.purge(node);
+      }
+      return failures;
+    });
+    assert.deepEqual(failures,[]);
   }finally{
     await browser.close();
   }

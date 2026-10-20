@@ -40,27 +40,31 @@ def _run(script: Path, pdf: Path, args: tuple[str, ...] = ()) -> dict | None:
 
 
 def audit_nature_pdf(
-    path: str | Path, *, strict: bool = False,
-    minimum_pt: float = 5, audit_scripts: Path | None = None,
+    path: str | Path, *, strict: bool = False, minimum_pt: float = 5,
 ) -> NatureAudit:
     """Never report PASS unless both upstream PDF audits can inspect the file."""
     pdf = Path(path)
-    scripts = Path(audit_scripts) if audit_scripts is not None else _DEFAULT_SCRIPTS
+    scripts = _DEFAULT_SCRIPTS
     collision = scripts / "audit_figure_collisions.py"
     fonts = scripts / "audit_pdf_text.py"
     if not pdf.is_file() or not collision.is_file() or not fonts.is_file():
         return NatureAudit("not_auditable", issues=("NATURE_SOURCE_UNAVAILABLE",))
     geometry = _run(collision, pdf)
     text = _run(fonts, pdf, ("--min-pt", str(minimum_pt)))
-    if geometry is None or text is None or not text.get("auditable"):
+    if (not isinstance(geometry, dict) or not isinstance(text, dict) or
+            not geometry.get("auditable") or not text.get("auditable") or
+            text.get("warnings")):
         return NatureAudit("not_auditable", issues=("NATURE_QA_NOT_AUDITABLE",))
     verdict = str(geometry.get("verdict") or "")
+    if verdict == "NOT AUDITABLE" or verdict not in {
+            "PASS", "REVIEW REQUIRED", "FIX BEFORE DELIVERY"}:
+        return NatureAudit("not_auditable", issues=("NATURE_QA_NOT_AUDITABLE",))
     count = int(text.get("below_minimum_count", 0))
     issues = []
     if verdict == "FIX BEFORE DELIVERY":
         kinds = [str(item.get("kind", "unknown")) for item in geometry.get("findings", [])]
         issues.extend("COLLISION:" + kind for kind in kinds)
-    elif strict and verdict == "WARN":
+    elif strict and verdict == "REVIEW REQUIRED":
         issues.append("COLLISION_WARN")
     if count:
         issues.append("FONT_TOO_SMALL")

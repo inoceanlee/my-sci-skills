@@ -271,9 +271,48 @@
 
       const hasLegend = layout.showlegend !== false &&
         data.some(trace => trace.showlegend !== false);
+      let fixedLegendPosition=null;
+      if(layoutPolicy.legend==="fixed"&&hasLegend){
+        const baseline=document.createElement("div");
+        baseline.style.cssText="position:fixed;left:-100000px;top:0;width:"+
+          preset.widthPx+"px;height:"+preset.heightPx+
+          "px;pointer-events:none;z-index:-1";
+        document.body.appendChild(baseline);
+        try{
+          await this.plotly.newPlot(
+            baseline,data,layout,{staticPlot:true,responsive:false}
+          );
+          const svg=baseline.querySelector("svg.main-svg");
+          const legend=baseline.querySelector(".legend");
+          if(svg&&legend){
+            const canvas=svg.getBoundingClientRect();
+            const rect=legend.getBoundingClientRect();
+            if(![canvas.left,canvas.top,canvas.width,canvas.height,
+              rect.left,rect.top].every(Number.isFinite)||
+              canvas.width<=0||canvas.height<=0){
+              throw this.constructor.exportError("FIXED_LEGEND_NOT_MEASURABLE");
+            }
+            fixedLegendPosition={
+              x:(rect.left-canvas.left)/canvas.width,
+              y:1-(rect.top-canvas.top)/canvas.height,
+              xref:"container",yref:"container",
+              xanchor:"left",yanchor:"top"
+            };
+          }
+        }finally{
+          try{
+            if(typeof this.plotly.purge==="function")this.plotly.purge(baseline);
+          }finally{
+            baseline.remove();
+          }
+        }
+      }
       const layouts = layoutTools.candidatePlotlyLayouts(
         layout, layoutPolicy, preset, hasLegend
       );
+      if(fixedLegendPosition)for(const candidate of layouts){
+        candidate.legend=Object.assign({},candidate.legend||{},fixedLegendPosition);
+      }
       const candidates = layouts.map(candidateLayout => ({
         layout:candidateLayout, data
       }));

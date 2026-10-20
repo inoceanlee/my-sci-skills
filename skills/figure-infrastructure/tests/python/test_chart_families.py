@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from pathlib import Path
+from runpy import run_path
 from tempfile import TemporaryDirectory
 import xml.etree.ElementTree as ET
 
@@ -37,13 +38,26 @@ def measure_metrics(fig, preset="single"):
         plt.close(measured)
 
 
-def assert_audit_status(audit):
-    if audit.geometry_status == "not_auditable":
+EXPECTED_AUDIT_STATUS = {kind: "not_auditable" for kind in KINDS}
+EXPECTED_AUDIT_STATUS.update({
+    "line": "passed", "kde": "passed", "ecdf": "passed"
+})
+EXPECTED_AUDITED_ROLES = {
+    "line": {"axis_title", "data_line", "legend", "legend_text", "tick_label"},
+    "kde": {"axis_title", "data_line", "tick_label"},
+    "ecdf": {"axis_title", "data_line", "tick_label"},
+}
+
+
+def assert_audit_status(audit, kind):
+    expected = EXPECTED_AUDIT_STATUS[kind]
+    assert audit.geometry_status == expected
+    if expected == "not_auditable":
         assert not audit.passed
         assert "GEOMETRY_NOT_AUDITABLE" in audit.issues
     else:
-        assert audit.geometry_status == "passed"
         assert audit.passed
+        assert EXPECTED_AUDITED_ROLES[kind] <= set(audit.audited_roles)
 
 def make_chart(kind):
     fig, ax = plt.subplots()
@@ -126,7 +140,7 @@ def test_single_column_png_is_nonempty_and_unclipped(kind):
         result = FigureExporter().export(fig, path, kind=kind)
         assert result.audit.layout_metrics is not None
         assert result.audit.layout_metrics.clipping_count == 0
-        assert_audit_status(result.audit)
+        assert_audit_status(result.audit, kind)
         with Image.open(path) as image:
             assert image.size == (PRESETS.single.width_px, PRESETS.single.height_px)
             assert ImageStat.Stat(image.convert("L")).stddev[0] > 2, kind
@@ -142,7 +156,7 @@ def test_svg_and_pdf_preserve_exact_canvas_dimensions(kind, preset, extension):
     with TemporaryDirectory() as temp:
         path = Path(temp) / f"{kind}-{preset}.{extension}"
         result = FigureExporter().export(fig, path, kind=kind, preset=preset)
-        assert_audit_status(result.audit)
+        assert_audit_status(result.audit, kind)
         assert (result.width_px, result.height_px) == (canvas.width_px, canvas.height_px)
         assert path.stat().st_size > 300
         if extension == "svg":
@@ -166,7 +180,7 @@ def test_double_column_png_preserves_exact_dimensions(kind):
     with TemporaryDirectory() as temp:
         target = Path(temp) / f"{kind}-double.png"
         result = FigureExporter().export(fig, target, kind=kind, preset="double")
-        assert_audit_status(result.audit)
+        assert_audit_status(result.audit, kind)
         assert result.audit.layout_metrics.clipping_count == 0
         with Image.open(target) as image:
             assert image.size == (PRESETS.double.width_px, PRESETS.double.height_px)
@@ -224,7 +238,7 @@ def test_compact_layout_recovers_each_family_after_gap_injection(kind):
         after = compact.audit.layout_metrics
         assert after.plot_area_fraction > before.plot_area_fraction + .15, kind
         assert after.clipping_count == 0, kind
-        assert_audit_status(compact.audit)
+        assert_audit_status(compact.audit, kind)
         for axis in ("x", "y"):
             if before.axis_title_gaps_pt[axis] is not None:
                 assert after.axis_title_gaps_pt[axis] < before.axis_title_gaps_pt[axis], kind
@@ -304,3 +318,63 @@ def test_compact_layout_reduces_colorbar_gap_after_colorbar_injection(kind):
         assert after < before, f"{kind}: before={before}, after={after}"
         assert compact.audit.layout_metrics.clipping_count == 0, kind
     plt.close(fig)
+
+
+def test_visual_gallery_rejected_export_is_not_reported_as_accepted():
+    verifier_path = Path(__file__).parents[1] / "visual" / "verify_outputs.py"
+    summarize = run_path(str(verifier_path))["summarize_acceptance"]
+    reports = [{
+        "export_error": ["CLEARANCE_VIOLATION"],
+        "audit_passed": False,
+        "geometry_status": None,
+    }]
+
+    assert summarize([])["acceptance_status"] == "incomplete"
+
+    summary = summarize(reports)
+
+    assert summary["gallery_generated"] is True
+    assert summary["acceptance_status"] == "failed"
+    assert summary["rejected_exports"] == 1
+
+
+def test_visual_gallery_does_not_write_fallback_after_rejected_export():
+    verifier_path = Path(__file__).parents[1] / "visual" / "verify_outputs.py"
+    module = run_path(str(verifier_path))
+
+    with TemporaryDirectory() as temp:
+        gallery = module["VisualGallery"](Path(temp))
+        gallery.KINDS = ("line",)
+        gallery.PRESET_NAMES = ("single",)
+        gallery.MODES = ("preserve",)
+
+        class RejectingExporter:
+            def export(self, *args, **kwargs):
+                raise module["LayoutValidationError"](["CLEARANCE_VIOLATION"])
+
+        gallery.exporter = RejectingExporter()
+        report = gallery.render()[0]
+
+        assert report["acceptance_status"] == "failed"
+        assert report["file"] is None
+        assert not (Path(temp) / "line-single-preserve.png").exists()
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_visual_gallery_preserve_layouts_are_exportable(kind):
+    verifier_path = Path(__file__).parents[1] / "visual" / "verify_outputs.py"
+    gallery = run_path(str(verifier_path))["VisualGallery"]
+    fig = make_chart(kind)
+    gallery.prepare_chart(fig)
+
+    try:
+        with TemporaryDirectory() as temp:
+            result = FigureExporter().export(
+                fig, Path(temp) / f"{kind}.png", kind=kind,
+                preset="single", layout_policy=LayoutPolicy(mode="preserve"),
+            )
+        assert result.audit.passed or (
+            result.audit.geometry_status == "not_auditable"
+        )
+    finally:
+        plt.close(fig)

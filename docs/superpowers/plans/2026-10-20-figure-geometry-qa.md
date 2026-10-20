@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **状态：**执行中。用户已授权实施。Task 1–4 已完成，Task 5–6 待执行。
+> **状态：**Task 1–5 已完成；Task 6 实现、Python/JS 回归、视觉检查和独立最终复审已完成。任务分支最终安全扫描、提交、合并与清理仍待执行。
 
 **Goal:** 为科研单图建立真实几何碰撞检查、最多五轮约束重排、保护区域和最终导出验收。
 
@@ -213,7 +213,7 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - [x] **Step 2：红测。** 运行 `node --test skills/figure-infrastructure/tests/javascript/browser.test.js skills/figure-infrastructure/tests/javascript/geometry.test.js`，确认新验收要求失败。
 - [x] **Step 3：实现。** 从临时 DOM 创建候选；优先用 Plotly 原生布局参数，再用审核后的实际几何微调。每轮重新放置必要标签并重新测量。通过后调用 `Plotly.toImage`；SVG 校验 viewBox/文本、PNG 校验尺寸与非空。失败不返回成功 `dataUrl`，所有路径执行 `Plotly.purge(node)`。
 - [x] **Step 4：绿测。** `compact` 自动修复、`preserve` 不修改、`legend=fixed` 保留、`not_auditable` 如实返回。断网、单/双栏 PNG/SVG 和源 Plotly 状态不变。图例不得为了腾空而消失或缩成不可读。
-- [ ] **Step 5：复审、提交。** 全 JS 测试通过；浏览器实际读取并放大最终两类图片。提交 `feat(figure): gate plotly exports on geometry`。
+- [x] **Step 5：复审、提交。** 全 JS 测试 45/45 通过；独立复审无问题；单/双栏 PNG、SVG 与专门标注图均经实际检查。提交 `9168ab9`（`feat(figure): gate plotly exports on geometry`）。
 - **回滚：**仅回退候选布局/导出流程，不影响 Python 或原雷达报告。
 
 ## Task 6：真实样图、能力声明与全套复审
@@ -228,11 +228,11 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - 能力表按图形家族、后端、导出格式和审查级别记录 `supported/native_only/unsupported`。
 - 每个 `supported` 必须完成该图形定义的必需角色审查。对 `native_only` 可输出图，但 `audit.passed=false`，`geometry_status=not_auditable`。
 
-- [ ] **Step 1：专项红测。** 对 Python 16 类、Plotly 10 类的现有每种单/双栏样图，添加“成功=完整角色已审查”或“未覆盖=如实标 native_only”的断言；禁止删掉原有图形/格式/尺寸测试。加入强制造成遮挡且应失败的负例。
-- [ ] **Step 2：绿测。** 运行完整 Python 和 JS 测试，不使用旧 198/19 作为固定通过项数；记录真实 passed/failed/warnings 和非零退出码。保持依赖警告可见。
-- [ ] **Step 3：实际视觉验收。** 在系统 Temp 输出单/双栏 `preserve/compact` 对照、整图联系表和关键放大图。分别读取折线、散点、图例、色条、旋转轴标题、保护区域场景。检查没有裁切、叠字、箭头偏离、明显可消除的多余空白；不以脚本“无异常”代替阅读 PNG。
-- [ ] **Step 4：验证不变条件。** 检查原 Figure/Plotly 交互对象哈希或结构前后不变；固定数据与色标不变；离线页面无网络请求；单栏 1004×709、双栏 2126×1241，SVG/PDF 物理尺寸一致。没有对应角色的图不得伪造 `0` 距离。
-- [ ] **Step 5：同步与提交。** 按 `project-context` 全量核对 `CONTEXT.md`，记录覆盖边界、真正完成的任务、下阶段 Task 10/11。完成独立代码复审、安全扫描、`git diff --check`，提交 `test(figure): validate complete geometry audits`。
+- [x] **Step 1：专项测试。** Python 16 类及 Plotly 10 类单/双栏与格式测试校验实际状态和必需角色。负例覆盖碰撞、双侧可见刻度、窄线段跨越、分离的 `M` 子路径、长折线拐点、描边半宽相切、标记范围、marker-only 几何、`markevery=1` 全点审查与稀疏 `markevery` 降级、SVG 变换描边与 `non-scaling-stroke`、变换失败、超大路径、无解标注、固定色条冲突、拒绝导出不生成回退 PNG、可见 `layout.shapes` 降级为 `not_auditable`、Nature 文本警告和未知 verdict 降级，以及禁止调用方选择可执行审计脚本目录。Matplotlib 三种阶梯样式均验证 `get_path()` 展开路径能捕捉遮挡。
+- [x] **Step 2：完整回归。** Python 全套 `268 passed`、`145 warnings`；JS 全套 `63 passed`、0 failed。真实导出覆盖 Python 16 类 × 单/双栏 × preserve/compact PNG；Plotly 10 类 × 单/双栏 PNG/SVG，离线且不改源图状态。
+- [x] **Step 3：实际视觉验收。** Python 图库生成 64 张 PNG：0 个拒绝导出，12 张完整审查通过，52 张因 `native_only` 诚实标为 `not_auditable`；报告状态为 `incomplete`。Agent 实际读取四张单/双栏 `preserve/compact` 联系表，以及折线、误差带、饼图和圆环图代表图片，未见明显遮挡或裁切。Plotly 生成 40 张 PNG、20 张 SVG；Agent 实际读取全部 40 张 PNG。回归检查 20 张 SVG 的根节点、`viewBox`、尺寸、关键文字、裁切状态和几何审查角色。
+- [x] **Step 4：不变条件。** Python Figure 尺寸、数据轴、线数据和色条状态快照未变；Plotly 结构及固定范围保持，离线浏览器无外网请求；PNG/SVG/PDF 物理尺寸通过完整回归。无法审查的图型明确返回 `not_auditable`，不伪报零冲突。
+- [ ] **Step 5：同步与提交。** `CONTEXT.md` 与本计划已同步。最终独立差异复审无未解决问题；Python `268/268`、JavaScript `63/63` 通过。`git diff --check`、任务分支完整安全扫描和提交仍待执行；扫描必须覆盖 `main` 基线到最终任务 HEAD 的全部变更，之后提交 `fix(figure): audit rendered geometry accurately`。
 - **回滚：**回退测试/能力表/上下文提交，不修改旧 Task 9 基线的实际数据或已留存结果。
 
 ## 最终验收门槛

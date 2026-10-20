@@ -5,6 +5,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
 from figure_layout import LayoutPolicy, ProtectedArea
 from figure_layout.audit import GeometryAuditor
@@ -53,6 +55,80 @@ def test_legend_overlapping_line_reports_data_occlusion():
                for item in result.issues)
     plt.close(fig)
 
+def test_line_crossing_required_annotation_is_data_occlusion():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.plot([0, 1], [0, 1], linewidth=3)
+    annotation = ax.text(.5, .5, "required label")
+    annotation.set_gid("annotation:required")
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert any(item.code == "DATA_OCCLUSION" and
+               item.element_ids == ("annotation:required", "data:line:0")
+               for item in result.issues)
+    plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    ("drawstyle", "label_position"),
+    (("steps-pre", (.002, .5)),
+     ("steps-mid", (.25, .01)),
+     ("steps-post", (.5, .01))),
+)
+def test_step_drawstyle_segment_crossing_annotation_is_data_occlusion(
+        drawstyle, label_position):
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.plot([0, 1], [0, 1], drawstyle=drawstyle, linewidth=3)
+    annotation = ax.text(*label_position, "step label", ha="center", va="center")
+    annotation.set_gid("annotation:step")
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert any(item.code == "DATA_OCCLUSION" and
+               item.element_ids == ("annotation:step", "data:line:0")
+               for item in result.issues), result.issues
+    plt.close(fig)
+
+
+def test_clipped_line_extension_does_not_occlude_outside_annotation():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.set_position([.5, .2, .4, .6])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.plot([-1, 2], [.5, .5], linewidth=3)
+    annotation = fig.text(.1, .5, "outside annotation")
+    annotation.set_gid("annotation:outside")
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert not any(item.code == "DATA_OCCLUSION" and
+                   item.element_ids == ("annotation:outside", "data:line:0")
+                   for item in result.issues)
+    plt.close(fig)
+
+
+def test_marker_overlapping_axis_title_is_data_occlusion():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.set_ylabel("required axis title")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    fig.canvas.draw()
+    title_bbox = ax.yaxis.label.get_window_extent(fig.canvas.get_renderer())
+    target = ((title_bbox.x0 + title_bbox.x1) / 2,
+              (title_bbox.y0 + title_bbox.y1) / 2)
+    marker_data = ax.transData.inverted().transform(target)
+    ax.plot([marker_data[0]], [marker_data[1]], linestyle="None",
+            marker="o", markersize=20, clip_on=False)
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert any(item.code == "DATA_OCCLUSION" and
+               item.element_ids == ("axis:y_title", "data:line:0")
+               for item in result.issues)
+    plt.close(fig)
+
 
 def test_rotated_axis_title_and_visible_tick_labels_are_audited():
     fig, ax = plt.subplots()
@@ -79,6 +155,22 @@ def test_text_outside_canvas_reports_clipping_with_element_id():
     assert result.clipping_count > 0
     assert any(item.code == "GEOMETRY_CLIPPING" and "label:outside" in item.element_ids
                for item in result.issues)
+    plt.close(fig)
+
+
+def test_colorbar_outside_canvas_reports_clipping_with_element_id():
+    fig, ax = plt.subplots()
+    colorbar = fig.colorbar(
+        ScalarMappable(norm=Normalize(0, 3), cmap="viridis"), ax=ax
+    )
+    colorbar.ax.set_position([1.05, .2, .05, .6])
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "failed"
+    assert result.clipping_count > 0
+    assert any(item.code == "GEOMETRY_CLIPPING" and
+               "colorbar:1" in item.element_ids for item in result.issues)
     plt.close(fig)
 
 
@@ -247,4 +339,170 @@ def test_audit_reports_y_axis_title_gap_below_three_points():
                item.element_ids[0] == "axis:y_title" and
                item.element_ids[1].startswith("tick:y:")
                for item in result.issues)
+    plt.close(fig)
+
+
+def test_visible_top_and_right_tick_labels_are_audited():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.xaxis.tick_top()
+    ax.yaxis.tick_right()
+    ax.set_xticks([.3], labels=["top tick"])
+    ax.set_yticks([.3], labels=["right tick"])
+    fig.canvas.draw()
+
+    for label in (ax.xaxis.get_major_ticks()[0].label2,
+                  ax.yaxis.get_major_ticks()[0].label2):
+        bbox = label.get_window_extent(fig.canvas.get_renderer())
+        fig.text(
+            (bbox.x0 + bbox.x1) / (2 * fig.bbox.width),
+            (bbox.y0 + bbox.y1) / (2 * fig.bbox.height),
+            "overlap", ha="center", va="center",
+        )
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    collision_ids = {
+        element_id
+        for issue in result.issues if issue.code == "GEOMETRY_COLLISION"
+        for element_id in issue.element_ids
+    }
+    assert "tick:x:0:label2" in collision_ids
+    assert "tick:y:0:label2" in collision_ids
+    plt.close(fig)
+
+
+def test_visible_line_stroke_crossing_legend_is_data_occlusion():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    line, = ax.plot([0, 1], [.5, .5], linewidth=12, label="wide")
+    legend = ax.legend(loc="center")
+    legend.set_gid("legend:wide")
+    fig.canvas.draw()
+
+    bbox = legend.get_window_extent(fig.canvas.get_renderer())
+    y = bbox.y0 - 4
+    display_points = np.array([[bbox.x0 + 2, y], [bbox.x1 - 2, y]])
+    data_points = ax.transData.inverted().transform(display_points)
+    line.set_data(data_points[:, 0], data_points[:, 1])
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "failed"
+    assert any(item.code == "DATA_OCCLUSION" and
+               item.element_ids[0] == "legend:wide"
+               for item in result.issues)
+    plt.close(fig)
+
+
+def test_visible_line_stroke_crossing_protected_area_is_reported():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    line, = ax.plot([.2, .8], [.5, .5], linewidth=12)
+    fig.canvas.draw()
+
+    points = ax.transData.transform([[.2, .5], [.8, .5]])
+    factor = 72 / fig.dpi
+    x_pt = (points[0, 0] - fig.bbox.x0) * factor
+    y_pt = (points[0, 1] - fig.bbox.y0) * factor
+    area = ProtectedArea(
+        "near-stroke", x_pt, y_pt + 1.5,
+        (points[1, 0] - points[0, 0]) * factor, 2,
+    )
+
+    result = GeometryAuditor().audit(fig, ax, protected_areas=(area,))
+
+    assert result.status == "failed"
+    assert any(item.code == "PROTECTED_AREA_CONFLICT" and
+               item.element_ids == ("near-stroke", "data:line:0")
+               for item in result.issues)
+    plt.close(fig)
+
+
+def test_marker_extent_crossing_protected_area_is_reported():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.plot([.5], [.5], linestyle="None", marker="o",
+            markersize=30, markeredgewidth=2)
+    fig.canvas.draw()
+
+    center_x, center_y = ax.transData.transform((.5, .5))
+    factor = 72 / fig.dpi
+    center_x_pt = (center_x - fig.bbox.x0) * factor
+    center_y_pt = (center_y - fig.bbox.y0) * factor
+    area = ProtectedArea(
+        "near-marker", center_x_pt + 14.5, center_y_pt - 1, 1, 2,
+    )
+
+    result = GeometryAuditor().audit(fig, ax, protected_areas=(area,))
+
+    assert result.status == "failed"
+    assert any(item.code == "PROTECTED_AREA_CONFLICT" and
+               item.element_ids == ("near-marker", "data:line:0")
+               for item in result.issues)
+    plt.close(fig)
+
+
+def test_marker_extent_crossing_legend_is_data_occlusion():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    line, = ax.plot([.5], [.5], linestyle="None", marker="o",
+                    markersize=30, markeredgewidth=2, label="marker")
+    legend = ax.legend(loc="center")
+    legend.set_gid("legend:marker")
+    fig.canvas.draw()
+
+    bbox = legend.get_window_extent(fig.canvas.get_renderer())
+    display_point = np.array([[(bbox.x0 + bbox.x1) / 2, bbox.y0 - 4]])
+    data_point = ax.transData.inverted().transform(display_point)[0]
+    line.set_data([data_point[0]], [data_point[1]])
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "failed"
+    assert any(item.code == "DATA_OCCLUSION" and
+               item.element_ids[0] == "legend:marker"
+               for item in result.issues)
+    plt.close(fig)
+
+
+def test_marker_only_trace_does_not_connect_points_for_occlusion():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    line, = ax.plot([.2, .8], [.5, .5], linestyle="None", marker="o",
+                    markersize=4, label="endpoints")
+    legend = ax.legend(loc="center")
+    legend.set_gid("legend:endpoints")
+    fig.canvas.draw()
+
+    bbox = legend.get_window_extent(fig.canvas.get_renderer())
+    y = (bbox.y0 + bbox.y1) / 2
+    display_points = np.array([[bbox.x0 - 8, y], [bbox.x1 + 8, y]])
+    data_points = ax.transData.inverted().transform(display_points)
+    line.set_data(data_points[:, 0], data_points[:, 1])
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert not any(item.code == "DATA_OCCLUSION" and
+                   item.element_ids[0] == "legend:endpoints"
+                   for item in result.issues)
+    plt.close(fig)
+
+
+def test_sparse_markevery_is_not_reported_as_complete_audit():
+    fig, ax = plt.subplots()
+    ax.plot([0, 1, 2], [0, 1, 2], marker="o", markevery=[0, 2])
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "not_auditable"
+    assert result.collision_count is None
+    assert any(item.code == "GEOMETRY_NOT_AUDITABLE" and
+               item.element_ids == ("data:line:0",)
+               for item in result.issues)
+    plt.close(fig)
+
+
+def test_markevery_one_is_fully_auditable():
+    fig, ax = plt.subplots()
+    ax.plot([0, 1], [0, 1], marker="o", markevery=1)
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "passed"
+    assert result.collision_count == 0
     plt.close(fig)

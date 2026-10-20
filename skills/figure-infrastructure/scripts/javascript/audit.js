@@ -17,6 +17,14 @@
         ],[],null,null);
       }
       const selectAll=selector=>svgs.flatMap(root=>Array.from(root.querySelectorAll(selector)));
+      const layoutShapes=node?._fullLayout?.shapes;
+      if(Array.isArray(layoutShapes)){
+        layoutShapes.forEach((shape,index)=>{
+          if(shape?.visible!==false)unknown.push(`layout:shape:${index}`);
+        });
+      }else if(Array.isArray(node?.layout?.shapes)&&node.layout.shapes.length){
+        unknown.push("layout:shapes");
+      }
 
       let viewBox=svg.viewBox?.baseVal;
       if(!viewBox||!(viewBox.width>0&&viewBox.height>0)){
@@ -149,6 +157,10 @@
         const id=`colorbar:${++colorbarIndex}`;
         roles.add("colorbar");
         colorbarElements.push({id,rect});
+        if(!inCanvas(rect)){
+          clippingCount++;
+          issues.push(issue("GEOMETRY_CLIPPING",[id],[rectPt(rect)]));
+        }
         for(const area of protectedBoxes){
           const overlap=this.intersection(rect,area.rect);
           if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
@@ -213,7 +225,6 @@
       for(let i=0;i<textElements.length;i++){
         for(let j=i+1;j<textElements.length;j++){
           const a=textElements[i],b=textElements[j];
-          if(a.role==="annotation"&&b.role==="annotation")continue;
           const overlap=this.intersection(a.rect,b.rect);
           if(overlap){
             issues.push(issue("GEOMETRY_COLLISION",[a.id,b.id],
@@ -267,13 +278,20 @@
           return;
         }
         let shapes=[];
+        let scatterMode=null;
         if(type==="scatter"){
-          const mode=trace.mode||"lines";
-          if(mode.includes("lines")){
+          const resolvedMode=Array.isArray(node._fullData)
+            ?node._fullData[index]?.mode:null;
+          scatterMode=typeof resolvedMode==="string"?resolvedMode:trace.mode;
+          if(typeof scatterMode!=="string"){
+            unknown.push(`${id}:mode`);
+            return;
+          }
+          if(scatterMode.includes("lines")){
             shapes.push(...group.querySelectorAll("path.js-line"));
             roles.add("data_line");
           }
-          if(mode.includes("markers")){
+          if(scatterMode.includes("markers")){
             shapes.push(...group.querySelectorAll("path.point,circle.point"));
             roles.add("data_marker");
           }
@@ -291,10 +309,15 @@
         shapes.forEach((shape,shapeIndex)=>{
           const rect=measure(shape,shape.matches("path.js-line"));
           if(!rect){unknown.push(`${id}:element:${shapeIndex}`);return;}
+          const lineShape=type==="scatter"&&scatterMode.includes("lines")&&
+            shape.matches("path.js-line");
+          const pathGeometry=lineShape?this.pathGeometry(shape,width,height):null;
+          if(lineShape&&!pathGeometry){unknown.push(`${id}:path_geometry`);return;}
           for(const area of protectedBoxes){
             const overlap=this.intersection(rect,area.rect);
-            const hits=type==="scatter"&&modeHasLines(trace)&&shape.matches("path.js-line")
-              ? this.pathHits(shape,area.rect,plotRect,width,height):Boolean(overlap);
+            const hits=lineShape
+              ? this.pathHits(shape,area.rect,plotRect,width,height,pathGeometry):Boolean(overlap);
+            if(hits===null){unknown.push(`${id}:path_geometry`);return;}
             if(hits)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
               [rectPt(area.rect),rectPt(rect)],{
                 overlapPt2:overlap?overlap.w*pt*overlap.h*pt:undefined
@@ -303,12 +326,28 @@
           for(const legend of legendElements){
             const overlap=this.intersection(rect,legend.rect);
             if(!overlap)continue;
-            const hits=type==="scatter"&&modeHasLines(trace)
-              ? this.pathHits(shape,legend.rect,plotRect,width,height):true;
+            const hits=lineShape
+              ? this.pathHits(shape,legend.rect,plotRect,width,height,pathGeometry):true;
+            if(hits===null){unknown.push(`${id}:path_geometry`);return;}
             if(hits){
               issues.push(issue("DATA_OCCLUSION",[legend.id,id],[rectPt(legend.rect),rectPt(rect)]));
               break;
             }
+          }
+          for(const text of textElements){
+            if(text.role==="legend_text")continue;
+            const textRect=plotRect?this.intersection(text.rect,plotRect):text.rect;
+            if(!textRect)continue;
+            const overlap=this.intersection(rect,textRect);
+            if(!overlap)continue;
+            const hits=lineShape
+              ?this.pathHits(shape,textRect,plotRect,width,height,pathGeometry)
+              :Boolean(overlap);
+            if(hits===null){unknown.push(`${id}:path_geometry`);return;}
+            if(hits)issues.push(issue("DATA_OCCLUSION",[text.id,id],
+              [rectPt(textRect),rectPt(rect)],{
+                overlapPt2:overlap.w*pt*overlap.h*pt
+              }));
           }
         });
       });
@@ -343,6 +382,7 @@
       return right>x&&bottom>y?{x,y,w:right-x,h:bottom-y}:null;
     }
 
+
     hasNonFinite(value){
       if(typeof value==="number")return !Number.isFinite(value);
       if(ArrayBuffer.isView(value)){
@@ -353,32 +393,140 @@
       return false;
     }
 
-    pathHits(path,rect,plotRect,width,height){
+    segmentIntersectsRect(x1,y1,x2,y2,rect){
+      const dx=x2-x1,dy=y2-y1;
+      let lower=0,upper=1;
+      let p=-dx,q=x1-rect.x;
+      if(p===0){if(q<0)return false;}
+      else{
+        const t=q/p;
+        if(p<0){if(t>upper)return false;if(t>lower)lower=t;}
+        else{if(t<lower)return false;if(t<upper)upper=t;}
+      }
+      p=dx;q=rect.x+rect.w-x1;
+      if(p===0){if(q<0)return false;}
+      else{
+        const t=q/p;
+        if(p<0){if(t>upper)return false;if(t>lower)lower=t;}
+        else{if(t<lower)return false;if(t<upper)upper=t;}
+      }
+      p=-dy;q=y1-rect.y;
+      if(p===0){if(q<0)return false;}
+      else{
+        const t=q/p;
+        if(p<0){if(t>upper)return false;if(t>lower)lower=t;}
+        else{if(t<lower)lower=t;if(t<upper)upper=t;}
+      }
+      p=dy;q=rect.y+rect.h-y1;
+      if(p===0){if(q<0)return false;}
+      else{
+        const t=q/p;
+        if(p<0){if(t>upper)return false;if(t>lower)lower=t;}
+        else{if(t<lower)lower=t;if(t<upper)upper=t;}
+      }
+      return lower<=upper;
+    }
+
+    pathGeometry(path,width,height){
       try{
+        const pathData=path.getAttribute("d");
+        if(typeof pathData!=="string"||pathData.length===0||pathData.length>1_000_000||
+           !Number.isFinite(width)||width<=0||!Number.isFinite(height)||height<=0)return null;
+        const tokens=pathData.match(/[A-Za-z]|[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?/g);
+        if(!tokens||tokens.join("")!==pathData.replace(/[\s,]+/g,""))return null;
+        const rootRect=path.ownerSVGElement?.getBoundingClientRect();
         const matrix=path.getScreenCTM();
-        const total=path.getTotalLength();
-        if(!matrix||!Number.isFinite(total))return false;
-        const stride=Math.max(1,total/10000);
-        for(let offset=0;offset<=total;offset+=stride){
-          const local=path.getPointAtLength(Math.min(offset,total));
-          const rootRect=path.ownerSVGElement?.getBoundingClientRect();
-          if(!(rootRect?.width>0&&rootRect?.height>0))return false;
-          const screenPoint=new DOMPoint(local.x,local.y).matrixTransform(matrix);
-          const point={
-            x:(screenPoint.x-rootRect.left)/rootRect.width*width,
-            y:(screenPoint.y-rootRect.top)/rootRect.height*height
-          };
-          const inPlot=!plotRect||(point.x>=plotRect.x&&point.x<=plotRect.x+plotRect.w&&
-            point.y>=plotRect.y&&point.y<=plotRect.y+plotRect.h);
-          if(inPlot&&point.x>=rect.x&&point.x<=rect.x+rect.w&&
-             point.y>=rect.y&&point.y<=rect.y+rect.h)return true;
+        if(!matrix||!(rootRect?.width>0&&rootRect?.height>0))return null;
+        if(![rootRect.left,rootRect.top,rootRect.width,rootRect.height].every(Number.isFinite))return null;
+        const style=path.ownerDocument?.defaultView?.getComputedStyle(path);
+        if(!style)return null;
+        const stroke=style.stroke==="none"?0:Number.parseFloat(style.strokeWidth);
+        if(!Number.isFinite(stroke)||stroke<0)return null;
+        const scaleX=Math.hypot(matrix.a,matrix.b),scaleY=Math.hypot(matrix.c,matrix.d);
+        const shear=matrix.a*matrix.c+matrix.b*matrix.d;
+        if(![scaleX,scaleY,shear].every(Number.isFinite))return null;
+        const nonScalingStroke=style.vectorEffect==="non-scaling-stroke";
+        if(stroke>0&&style.vectorEffect!=="none"&&!nonScalingStroke)return null;
+        if(stroke>0&&!nonScalingStroke){
+          const tolerance=1e-8*Math.max(1,scaleX*scaleY);
+          if(Math.abs(scaleX-scaleY)>tolerance||Math.abs(shear)>tolerance)return null;
         }
-      }catch{return false;}
+        const strokeScale=nonScalingStroke?1:(scaleX+scaleY)/2;
+        const geometry={segments:[],strokeX:stroke/2*strokeScale*width/rootRect.width,
+          strokeY:stroke/2*strokeScale*height/rootRect.height};
+        let index=0,command=null,current=null,start=null;
+        const project=(localX,localY)=>{
+          const screen=new DOMPoint(localX,localY).matrixTransform(matrix);
+          const x=(screen.x-rootRect.left)/rootRect.width*width;
+          const y=(screen.y-rootRect.top)/rootRect.height*height;
+          if(![localX,localY,screen.x,screen.y,x,y].every(Number.isFinite))return null;
+          return {localX,localY,x,y};
+        };
+        const addSegment=point=>{
+          if(!current||geometry.segments.length>=400_000)return false;
+          geometry.segments.push(current.x,current.y,point.x,point.y);
+          current=point;
+          return true;
+        };
+        while(index<tokens.length){
+          if(/^[A-Za-z]$/.test(tokens[index])){
+            command=tokens[index++];
+            if(!"MmLlHhVvZz".includes(command))return null;
+            if(command.toUpperCase()==="Z"){
+              if(!current||!start||!addSegment(start))return null;
+              current=start;command=null;
+              continue;
+            }
+          }else if(!command)return null;
+          const operation=command.toUpperCase();
+          const relative=command!==operation;
+          let localX,localY;
+          if(operation==="M"||operation==="L"){
+            if(index+1>=tokens.length||/[A-Za-z]/.test(tokens[index])||/[A-Za-z]/.test(tokens[index+1]))return null;
+            localX=Number(tokens[index++]);localY=Number(tokens[index++]);
+            if(relative){
+              if(!current&&operation!=="M")return null;
+              localX+=(current?.localX??0);localY+=(current?.localY??0);
+            }
+          }else if(operation==="H"){
+            if(index>=tokens.length||/[A-Za-z]/.test(tokens[index])||!current)return null;
+            localX=Number(tokens[index++]);localY=current.localY;
+            if(relative)localX+=current.localX;
+          }else{
+            if(index>=tokens.length||/[A-Za-z]/.test(tokens[index])||!current)return null;
+            localX=current.localX;localY=Number(tokens[index++]);
+            if(relative)localY+=current.localY;
+          }
+          if(![localX,localY].every(Number.isFinite))return null;
+          const point=project(localX,localY);
+          if(!point)return null;
+          if(operation==="M"){
+            current=point;start=point;command=relative?"l":"L";
+          }else if(!addSegment(point))return null;
+        }
+        return geometry;
+      }catch{return null;}
+    }
+
+    pathHits(path,rect,plotRect,width,height,geometry=null){
+      geometry=geometry||this.pathGeometry(path,width,height);
+      if(!geometry)return null;
+      const x=Math.max(rect.x-geometry.strokeX,plotRect?.x??rect.x-geometry.strokeX);
+      const y=Math.max(rect.y-geometry.strokeY,plotRect?.y??rect.y-geometry.strokeY);
+      const right=Math.min(rect.x+rect.w+geometry.strokeX,
+        plotRect?plotRect.x+plotRect.w:rect.x+rect.w+geometry.strokeX);
+      const bottom=Math.min(rect.y+rect.h+geometry.strokeY,
+        plotRect?plotRect.y+plotRect.h:rect.y+rect.h+geometry.strokeY);
+      if(right<x||bottom<y)return false;
+      const targetRect={x,y,w:right-x,h:bottom-y};
+      for(let index=0;index<geometry.segments.length;index+=4){
+        if(this.segmentIntersectsRect(geometry.segments[index],geometry.segments[index+1],
+          geometry.segments[index+2],geometry.segments[index+3],targetRect))return true;
+      }
       return false;
     }
   }
 
-  const modeHasLines=trace=>(trace.mode||"lines").includes("lines");
   if(typeof module!=="undefined"&&module.exports)module.exports={PlotlyGeometryAuditor};
   if(typeof window!=="undefined")root.ScientificFigureAudit={PlotlyGeometryAuditor};
 })(typeof window!=="undefined"?window:{});

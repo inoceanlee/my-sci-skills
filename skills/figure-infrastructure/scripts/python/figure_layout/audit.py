@@ -115,7 +115,7 @@ class GeometryAuditor:
                 ))
 
         def add_text(element_id, role, text):
-            if text.get_text():
+            if text.get_visible() and text.get_text():
                 add(text.get_gid() or element_id, role, text,
                     text.get_window_extent(renderer))
 
@@ -126,7 +126,9 @@ class GeometryAuditor:
             low, high = sorted(ax.get_xlim() if axis_name == "x" else ax.get_ylim())
             for index, tick in enumerate(axis.get_major_ticks()):
                 if low - 1e-12 <= tick.get_loc() <= high + 1e-12:
-                    add_text(f"tick:{axis_name}:{index}", "tick_label", tick.label1)
+                    for side in ("label1", "label2"):
+                        add_text(f"tick:{axis_name}:{index}:{side}", "tick_label",
+                                 getattr(tick, side))
         for index, text in enumerate(ax.texts):
             add_text(f"text:{index}", "annotation", text)
         for index, text in enumerate(fig.texts):
@@ -147,6 +149,13 @@ class GeometryAuditor:
             bbox = colorbar_ax.get_tightbbox(renderer)
             if self._valid_bbox(bbox):
                 elements.append(_Element(f"colorbar:{index}", "colorbar", bbox))
+                if (not fig.bbox.contains(bbox.x0, bbox.y0) or
+                        not fig.bbox.contains(bbox.x1, bbox.y1)):
+                    clipping_count += 1
+                    issues.append(GeometryIssue(
+                        "GEOMETRY_CLIPPING", (f"colorbar:{index}",),
+                        (self._rect_pt(fig, bbox),)
+                    ))
                 roles.add("colorbar")
 
         line_shapes = []
@@ -169,10 +178,64 @@ class GeometryAuditor:
                 continue
             if len(vertices) and not any(valid):
                 continue
-            line_shapes.append((line_id, vertices, valid))
+            try:
+                line_width = float(line.get_linewidth())
+                marker_size = float(line.get_markersize())
+                marker_edge_width = float(line.get_markeredgewidth())
+            except (TypeError, ValueError, OverflowError):
+                unauditable.append(line_id)
+                continue
+            if not all(isfinite(value) and value >= 0 for value in (
+                    line_width, marker_size, marker_edge_width)):
+                unauditable.append(line_id)
+                continue
+            clip_bbox = None
+            if line.get_clip_on():
+                if line.get_clip_path() is not None:
+                    unauditable.append(line_id)
+                    continue
+                clip_box = line.get_clip_box()
+                if clip_box is not None:
+                    try:
+                        clip_bbox = Bbox.from_extents(*clip_box.extents)
+                    except (TypeError, ValueError, RuntimeError):
+                        unauditable.append(line_id)
+                        continue
+                    if not self._valid_bbox(clip_bbox):
+                        unauditable.append(line_id)
+                        continue
+            line_style = line.get_linestyle()
+            has_line = line_style not in ("None", "none", "", " ") and line_width > 0
+            marker = line.get_marker()
+            has_marker = (marker not in (None, "None", "none", "", " ") and
+                          marker_size > 0)
+            markevery = line.get_markevery()
+            every_point = (isinstance(markevery, int) and
+                           not isinstance(markevery, bool) and markevery == 1)
+            if has_marker and markevery is not None and not every_point:
+                unauditable.append(line_id)
+            if not has_line and not has_marker:
+                continue
+            line_padding_px = line_width / (2 * factor)
+            marker_padding_px = (marker_size + marker_edge_width) / (2 * factor)
+            line_shapes.append((
+                line_id, vertices, valid, has_line, line_padding_px,
+                has_marker, marker_padding_px, clip_bbox,
+            ))
             roles.add("data_line")
             for element in elements:
-                if element.role == "legend" and self._line_hits_bbox(vertices, valid, element.bbox):
+                if element.role not in (
+                        "legend", "axis_title", "tick_label", "annotation",
+                        "figure_title"):
+                    continue
+                visible_bbox = self._intersect_bbox(element.bbox, clip_bbox)
+                if clip_bbox is not None and visible_bbox is None:
+                    continue
+                target_bbox = visible_bbox or element.bbox
+                if ((has_line and self._line_hits_bbox(
+                        vertices, valid, target_bbox, line_padding_px)) or
+                        (has_marker and self._marker_hits_bbox(
+                            vertices, valid, target_bbox, marker_padding_px))):
                     issues.append(GeometryIssue(
                         "DATA_OCCLUSION", (element.id, line_id),
                         (self._rect_pt(fig, element.bbox),), None, None
@@ -206,8 +269,16 @@ class GeometryAuditor:
                     area_bbox.x0 + tolerance_px, area_bbox.y0 + tolerance_px,
                     area_bbox.x1 - tolerance_px, area_bbox.y1 - tolerance_px,
                 )
-            for line_id, vertices, valid in line_shapes:
-                if self._line_hits_bbox(vertices, valid, line_bbox):
+            for (line_id, vertices, valid, has_line, line_padding_px,
+                 has_marker, marker_padding_px, clip_bbox) in line_shapes:
+                target_bbox = self._intersect_bbox(line_bbox, clip_bbox)
+                if clip_bbox is not None and target_bbox is None:
+                    continue
+                target_bbox = target_bbox or line_bbox
+                if ((has_line and self._line_hits_bbox(
+                        vertices, valid, target_bbox, line_padding_px)) or
+                        (has_marker and self._marker_hits_bbox(
+                            vertices, valid, target_bbox, marker_padding_px))):
                     issues.append(GeometryIssue(
                         "PROTECTED_AREA_CONFLICT", (area_id, line_id), (area_rect,)
                     ))
@@ -308,6 +379,18 @@ class GeometryAuditor:
                 bbox.width > 0 and bbox.height > 0)
 
     @staticmethod
+    def _intersect_bbox(first, second):
+        if second is None:
+            return first
+        left = max(first.x0, second.x0)
+        bottom = max(first.y0, second.y0)
+        right = min(first.x1, second.x1)
+        top = min(first.y1, second.y1)
+        if right <= left or top <= bottom:
+            return None
+        return Bbox.from_extents(left, bottom, right, top)
+
+    @staticmethod
     def _rect_pt(fig, bbox):
         factor = 72 / fig.dpi
         return (
@@ -318,9 +401,13 @@ class GeometryAuditor:
         )
 
     @staticmethod
-    def _line_hits_bbox(vertices, valid, bbox):
+    def _line_hits_bbox(vertices, valid, bbox, padding_px=0.0):
         left, right = sorted((bbox.x0, bbox.x1))
         bottom, top = sorted((bbox.y0, bbox.y1))
+        left -= padding_px
+        right += padding_px
+        bottom -= padding_px
+        top += padding_px
         for index in range(len(vertices) - 1):
             if not valid[index] or not valid[index + 1]:
                 continue
@@ -329,6 +416,19 @@ class GeometryAuditor:
             if max(x0, x1) < left or min(x0, x1) > right or max(y0, y1) < bottom or min(y0, y1) > top:
                 continue
             if GeometryAuditor._segment_intersects_rect(x0, y0, x1, y1, left, bottom, right, top):
+                return True
+        return False
+
+    @staticmethod
+    def _marker_hits_bbox(vertices, valid, bbox, padding_px):
+        left, right = sorted((bbox.x0, bbox.x1))
+        bottom, top = sorted((bbox.y0, bbox.y1))
+        left -= padding_px
+        right += padding_px
+        bottom -= padding_px
+        top += padding_px
+        for index, (x, y) in enumerate(vertices):
+            if valid[index] and left <= x <= right and bottom <= y <= top:
                 return True
         return False
 

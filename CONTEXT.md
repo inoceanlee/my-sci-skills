@@ -14,7 +14,7 @@
 - Python 16 类与 Plotly 10 类图表的单/双栏样图已视觉审查，标签、图例和色条均清晰且未裁切。
 - 合并后全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
 - Nature Figure PDF 审查已按 Apache-2.0、固定 commit 与字节哈希引入。Python PDF 默认报告审查状态。
-- 2026-10-20：几何验收计划执行中。Task 1 Python 审计提交 `a9e346a`（206 项通过）；Task 2 Plotly SVG 审计提交 `7e63535`（27 项 JS 回归通过）。Task 3 保护区避让、固定元素位置保持与实测 3/4/6 pt 净空已实现，专项回归 Python 28 项、JS 26 项通过；Task 3 提交待做，任务分支尚未合并。
+- 2026-10-20：几何验收计划执行中。Task 1 Python 审计提交 `a9e346a`（206 项通过）；Task 2 Plotly SVG 审计提交 `7e63535`（27 项 JS 回归通过）；Task 3 保护区避让、固定元素位置保持与实测 3/4/6 pt 净空已实现并提交 `b0602b6`，专项回归 Python 28 项、JS 26 项通过；任务分支尚未合并。
 - 审计器可报告 `PROTECTED_AREA_INVALID`、`PROTECTED_AREA_CONFLICT` 与 3/4/6 pt `CLEARANCE_VIOLATION`；compact 避让保护区，preserve 不移动现有内容并报告冲突，Python fixed 图例保持页面坐标。Python/Plotly 最终导出验收与完整图族覆盖仍待 Task 4–6。
 
 ## 下一步

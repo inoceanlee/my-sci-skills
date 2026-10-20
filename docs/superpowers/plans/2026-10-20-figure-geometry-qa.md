@@ -177,7 +177,7 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - [x] **Step 2：净空红测。** 构造实际 X/Y 标题 3 pt、图例/色条 4 pt、外框 6 pt 净空的图。断言无新增 padding、候选不会因重复累加而缩小主图。注入额外 50/45/80/40 pt 和四侧不均匀空白，单独判断缩短。
 - [x] **Step 3：实现。** 输入时校验 `ProtectedArea`，测量时把区域作为不可占用矩形。`preserve` 只审查；`compact` 的候选位置排除重叠区域。所有安全距离按实测对象之间的净空计算一次，不按容器层级累计。
 - [x] **Step 4：绿测。** Python 区域/净空专项 28 项、JS 布局/几何/导出回归 26 项通过；包括无法避让冲突、preserve 冲突、fixed 图例位置和色条 4 pt 净空。
-- [ ] **Step 5：复审、提交。** 两端的净空与区域输入互相核对，提交 `feat(figure): protect canvas regions and measured gaps`。
+- [x] **Step 5：复审、提交。** Python/JS 区域与净空契约互相核对；提交 `b0602b6 feat(figure): protect canvas regions and measured gaps`。
 - **回滚：**单独回退区域契约与净空候选修改；几何审查器继续可独立运行。
 
 ## Task 4：Python 有限次排版及终稿验收

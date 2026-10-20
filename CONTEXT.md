@@ -14,14 +14,15 @@
 - Python 16 类与 Plotly 10 类图表的单/双栏样图已视觉审查，标签、图例和色条均清晰且未裁切。
 - 合并后全套测试：Python 198 项通过、56 项依赖弃用警告；JavaScript 19 项通过。
 - Nature Figure PDF 审查已按 Apache-2.0、固定 commit 与字节哈希引入。Python PDF 默认报告审查状态。
-- 2026-10-20：几何验收计划执行中。Task 1 Python 审计提交 `a9e346a`（206 项通过）；Task 2 Plotly SVG 审计提交 `7e63535`（27 项 JS 回归通过）；Task 3 保护区避让、固定元素位置保持与实测 3/4/6 pt 净空已实现并提交 `b0602b6`，专项回归 Python 28 项、JS 26 项通过；任务分支尚未合并。
-- 审计器可报告 `PROTECTED_AREA_INVALID`、`PROTECTED_AREA_CONFLICT` 与 3/4/6 pt `CLEARANCE_VIOLATION`；compact 避让保护区，preserve 不移动现有内容并报告冲突，Python fixed 图例保持页面坐标。Python/Plotly 最终导出验收与完整图族覆盖仍待 Task 4–6。
+- Task 4 Python 导出门禁已提交 `1f43876`。导出器在标注后审计几何、按最多 5 个候选评分，并在验证元数据后原子替换文件。Python 全套 231 项通过，137 条依赖弃用警告；JS 全套 38 项通过。
+- Python 图形支持的角色会报告 `passed`；无法审查的图形会报告 `not_auditable` 且 `audit.passed=false`。紧凑布局按刻度溢出、色条边界与图例 padding 实测避让。
 
 ## 下一步
 
-1. 完成几何审计剩余计划任务，更新项目上下文并合并验证后的任务分支。
-2. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
-3. 完成 Task 11：配置 Windows/Linux CI，审查完整历史与许可，再决定是否发布。
+1. 实施 Task 5：补齐 Plotly 几何审计门槛与临时 DOM 重排。
+2. 完成 Task 6：复核 16 类 Python、10 类 Plotly 代表图，更新能力表并执行视觉验收。
+3. 完成 Task 10：编写 Skill 入口、安装脚本和复用文档。
+4. 完成 Task 11：配置 CI，复核完整历史与许可，再评估发布。
 
 ## 用户约束
 - Skill 程序代码只放在该 Skill 的 `scripts/` 内。
@@ -37,7 +38,7 @@
 - 代表性图形测试不等于对全部用户数据的质量保证。
 - Sci Skill 版本通过 Git 标签锁定，避免多端维护分叉。
 
-- Python/Plotly 最终导出尚未接入完整几何门槛；Task 4–5 待完成。
+- Python 最终导出已接入几何门槛；Task 5 Plotly 导出门槛与 Task 6 最终验收待完成。
 - Task 6 的图族完整角色覆盖、实际视觉验收、能力表与最终安全复审待完成。
 
 ## 文件入口

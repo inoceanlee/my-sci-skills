@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **状态：**待用户审阅。本文仅授权规划，不授权程序实施、全局环境变更或 GitHub 发布。
+> **状态：**执行中。用户已授权实施。Task 1–4 已完成，Task 5–6 待执行。
 
 **Goal:** 为科研单图建立真实几何碰撞检查、最多五轮约束重排、保护区域和最终导出验收。
 
@@ -191,11 +191,11 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - `ExportAudit` 增加 `geometry_status, geometry_issues, audited_roles`；原 `layout_metrics` 与 `passed` 保持可读取。
 - `FigureLayoutOptimizer` 负责候选移动；`FigureExporter` 控制渲染、标注、复测与最终提交，最多 5 轮。
 
-- [ ] **Step 1：失败测试。** 先人为叠放标签、图例、色条，要求自动恢复或 `LayoutValidationError`，错误结构含 ID 与 pt 坐标。无解 30 个必需标注在 5 轮内退出。直接测试标注**之后** `collision_count` 变化。
-- [ ] **Step 2：红测。** 执行 `.venv\Scripts\python.exe -m pytest skills/figure-infrastructure/tests/python/test_export.py skills/figure-infrastructure/tests/python/test_annotations.py -q`；记录新断言的实际失败。
-- [ ] **Step 3：实现。** 临时 Figure 上执行“渲染、标签、几何审查、按等级试新候选”直至通过或 5 次用尽；按 `(不可测数量,硬冲突数量,裁切数量,净空缺额,-绘图区比例)` 比较。`preserve` 仅审查一次。成功后写同目录临时输出，重读 PNG/SVG/PDF 元数据，最后原子替换目标。已有目标在失败时保持原样。
-- [ ] **Step 4：绿测。** 断言无冲突、无遮挡、尺寸固定、已有 `fixed/reference/min_span` 与固定色标不变；原输入 Figure 不变。`not_auditable` 只能返回 `audit.passed=false`，不可报告已完成完整 QA。Nature PDF 的结果仍独立保留。
-- [ ] **Step 5：复审、提交。** Python 全套测试及单/双栏导出成功，再审查临时文件清理与异常退出。提交 `feat(figure): gate matplotlib exports on geometry`。
+- [x] **Step 1：失败测试。** 标签、图例、色条冲突、标注后复测及无解冲突均有回归用例。
+- [x] **Step 2：红测。** 新增用例先触发标注状态、目标文件保护、色条与图例净空及右侧刻度边界失败。
+- [x] **Step 3：实现。** 导出器在副本上运行最多 5 个候选，标注后审计并排序。`preserve` 只审查一次。PNG、SVG、PDF 写入同目录临时文件，验证元数据后原子替换目标。
+- [x] **Step 4：绿测。** Python 全套 231 项通过，137 条依赖弃用警告。JS 全套 38 项通过。覆盖固定/参考范围、色标、源图不变、不可审计状态及单/双栏尺寸。
+- [x] **Step 5：复审、提交。** 独立 reviewer 未发现问题。提交 `1f43876 feat(figure): gate matplotlib exports on geometry`。
 - **回滚：**回退导出器与优化器改动，审查器代码仍可单独调用。
 
 ## Task 5：Plotly 有限次排版及终稿验收
@@ -247,4 +247,4 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - [ ] 相关任务分支通过复审后快进合入 `main`，工作树干净；临时产物不提交。
 - [ ] 不触碰雷达仓库、不创建公开 GitHub 远程、不安装全局工具。
 
-审批本计划后，向本地 Agent 交接每个任务的 Skills、范围和验证命令。结束后由云端独立审查日志、Git、导出图片与能力表。
+实施已获用户授权。各任务完成后更新状态。最终验收以测试输出、实际导出图片和 Git 记录为准。

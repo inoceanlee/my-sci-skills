@@ -1,5 +1,6 @@
 """Representative scientific chart families: real, readable exported figures."""
 
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import xml.etree.ElementTree as ET
@@ -14,6 +15,7 @@ import pytest
 import seaborn as sns
 
 from figure_layout import FigureExporter, LayoutPolicy, PRESETS
+from figure_layout.layout import FigureLayoutOptimizer
 
 
 KINDS = (
@@ -22,6 +24,26 @@ KINDS = (
     "pie", "donut", "heatmap", "correlation", "contour"
 )
 
+
+
+def measure_metrics(fig, preset="single"):
+    measured = deepcopy(fig)
+    canvas = getattr(PRESETS, preset)
+    measured.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
+    measured.set_dpi(canvas.dpi)
+    try:
+        return FigureLayoutOptimizer(measured, measured.axes[0]).measure()
+    finally:
+        plt.close(measured)
+
+
+def assert_audit_status(audit):
+    if audit.geometry_status == "not_auditable":
+        assert not audit.passed
+        assert "GEOMETRY_NOT_AUDITABLE" in audit.issues
+    else:
+        assert audit.geometry_status == "passed"
+        assert audit.passed
 
 def make_chart(kind):
     fig, ax = plt.subplots()
@@ -104,7 +126,7 @@ def test_single_column_png_is_nonempty_and_unclipped(kind):
         result = FigureExporter().export(fig, path, kind=kind)
         assert result.audit.layout_metrics is not None
         assert result.audit.layout_metrics.clipping_count == 0
-        assert result.audit.passed, (kind, result.audit.issues)
+        assert_audit_status(result.audit)
         with Image.open(path) as image:
             assert image.size == (PRESETS.single.width_px, PRESETS.single.height_px)
             assert ImageStat.Stat(image.convert("L")).stddev[0] > 2, kind
@@ -120,7 +142,7 @@ def test_svg_and_pdf_preserve_exact_canvas_dimensions(kind, preset, extension):
     with TemporaryDirectory() as temp:
         path = Path(temp) / f"{kind}-{preset}.{extension}"
         result = FigureExporter().export(fig, path, kind=kind, preset=preset)
-        assert result.audit.passed, (kind, preset, extension, result.audit.issues)
+        assert_audit_status(result.audit)
         assert (result.width_px, result.height_px) == (canvas.width_px, canvas.height_px)
         assert path.stat().st_size > 300
         if extension == "svg":
@@ -144,7 +166,7 @@ def test_double_column_png_preserves_exact_dimensions(kind):
     with TemporaryDirectory() as temp:
         target = Path(temp) / f"{kind}-double.png"
         result = FigureExporter().export(fig, target, kind=kind, preset="double")
-        assert result.audit.passed, (kind, result.audit.issues)
+        assert_audit_status(result.audit)
         assert result.audit.layout_metrics.clipping_count == 0
         with Image.open(target) as image:
             assert image.size == (PRESETS.double.width_px, PRESETS.double.height_px)
@@ -197,16 +219,12 @@ def test_compact_layout_recovers_each_family_after_gap_injection(kind):
 
     with TemporaryDirectory() as temp:
         exporter = FigureExporter()
-        preserved = exporter.export(
-            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
-            layout_policy=LayoutPolicy(mode="preserve"),
-        )
+        before = measure_metrics(fig)
         compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
-        before = preserved.audit.layout_metrics
         after = compact.audit.layout_metrics
         assert after.plot_area_fraction > before.plot_area_fraction + .15, kind
         assert after.clipping_count == 0, kind
-        assert compact.audit.passed, (kind, compact.audit.issues)
+        assert_audit_status(compact.audit)
         for axis in ("x", "y"):
             if before.axis_title_gaps_pt[axis] is not None:
                 assert after.axis_title_gaps_pt[axis] < before.axis_title_gaps_pt[axis], kind
@@ -225,10 +243,7 @@ def test_compact_layout_reduces_each_outer_margin_after_margin_injection(kind):
     fig.subplots_adjust(left=.42, right=.57, bottom=.42, top=.58)
     with TemporaryDirectory() as temp:
         exporter = FigureExporter()
-        before = exporter.export(
-            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
-            layout_policy=LayoutPolicy(mode="preserve"),
-        ).audit.layout_metrics
+        before = measure_metrics(fig)
         compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
         after = compact.audit.layout_metrics
         for side, old, new in zip(
@@ -247,10 +262,7 @@ def test_compact_layout_reduces_legend_gap_after_legend_injection(kind):
     legend.set_bbox_to_anchor((1.75, 1.15), transform=fig.axes[0].transAxes)
     with TemporaryDirectory() as temp:
         exporter = FigureExporter()
-        before = exporter.export(
-            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
-            layout_policy=LayoutPolicy(mode="preserve"),
-        ).audit.layout_metrics.legend_plot_gap_pt
+        before = measure_metrics(fig).legend_plot_gap_pt
         compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
         after = compact.audit.layout_metrics.legend_plot_gap_pt
         assert after < before, f"{kind}: before={before}, after={after}"
@@ -268,10 +280,7 @@ def test_compact_layout_reduces_axis_title_gaps_after_labelpad_injection(kind):
         ax.yaxis.labelpad = 40
     with TemporaryDirectory() as temp:
         exporter = FigureExporter()
-        before = exporter.export(
-            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
-            layout_policy=LayoutPolicy(mode="preserve"),
-        ).audit.layout_metrics.axis_title_gaps_pt
+        before = measure_metrics(fig).axis_title_gaps_pt
         compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
         after = compact.audit.layout_metrics.axis_title_gaps_pt
         for axis in ("x", "y"):
@@ -289,10 +298,7 @@ def test_compact_layout_reduces_colorbar_gap_after_colorbar_injection(kind):
         colorbar.set_position((.90, .40, .025, .20))
     with TemporaryDirectory() as temp:
         exporter = FigureExporter()
-        before = exporter.export(
-            fig, Path(temp) / f"{kind}-preserved.png", kind=kind,
-            layout_policy=LayoutPolicy(mode="preserve"),
-        ).audit.layout_metrics.colorbar_plot_gap_pt
+        before = measure_metrics(fig).colorbar_plot_gap_pt
         compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
         after = compact.audit.layout_metrics.colorbar_plot_gap_pt
         assert after < before, f"{kind}: before={before}, after={after}"

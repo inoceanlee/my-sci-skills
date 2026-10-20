@@ -1,7 +1,7 @@
 """Compact single-panel figure layout using measured renderer geometry."""
 
 from dataclasses import dataclass
-from math import isfinite
+from math import isfinite, sqrt
 from typing import Literal
 from matplotlib.transforms import Bbox
 
@@ -81,6 +81,56 @@ class FigureLayoutOptimizer:
             if label.get_visible() and label.get_text():
                 available.append(label.get_window_extent(renderer))
         return available
+
+    def _fit_colorbar_x_ticks(self, colorbar):
+        renderer = self._render()
+        colorbar_bbox = colorbar.get_tightbbox(renderer)
+        if colorbar_bbox is None:
+            return
+        required_gap = 4 * self.figure.dpi / 72
+        lower_inset = upper_inset = 0
+        for tick_bbox in self._visible_ticks(renderer, "x"):
+            if tick_bbox.x1 <= colorbar_bbox.x0:
+                horizontal_gap = colorbar_bbox.x0 - tick_bbox.x1
+            elif colorbar_bbox.x1 <= tick_bbox.x0:
+                horizontal_gap = tick_bbox.x0 - colorbar_bbox.x1
+            else:
+                horizontal_gap = 0
+            if horizontal_gap >= required_gap:
+                continue
+            vertical_gap = sqrt(required_gap ** 2 - horizontal_gap ** 2)
+            if colorbar_bbox.y0 >= tick_bbox.y1:
+                lower_inset = max(
+                    lower_inset,
+                    vertical_gap - (colorbar_bbox.y0 - tick_bbox.y1),
+                )
+            elif tick_bbox.y0 >= colorbar_bbox.y1:
+                upper_inset = max(
+                    upper_inset,
+                    vertical_gap - (tick_bbox.y0 - colorbar_bbox.y1),
+                )
+            elif tick_bbox.y0 < (colorbar_bbox.y0 + colorbar_bbox.y1) / 2:
+                lower_inset = max(
+                    lower_inset,
+                    tick_bbox.y1 + vertical_gap - colorbar_bbox.y0,
+                )
+            else:
+                upper_inset = max(
+                    upper_inset,
+                    colorbar_bbox.y1 - tick_bbox.y0 + vertical_gap,
+                )
+        if lower_inset <= 0 and upper_inset <= 0:
+            return
+        position = colorbar.get_position()
+        height = self.figure.bbox.height
+        lower_inset /= height
+        upper_inset /= height
+        if lower_inset + upper_inset >= position.height:
+            return
+        colorbar.set_position((
+            position.x0, position.y0 + lower_inset, position.width,
+            position.height - lower_inset - upper_inset,
+        ))
 
     def measure(self):
         fig, ax = self.figure, self.ax
@@ -195,10 +245,23 @@ class FigureLayoutOptimizer:
             children += [x.get_window_extent(renderer) for x in (ax.xaxis.label, ax.yaxis.label, ax.title, ax.xaxis.get_offset_text(), ax.yaxis.get_offset_text())
                          if x.get_visible() and x.get_text()]
             bbox = Bbox.union(children)
+            colorbar_boxes = []
+            for colorbar in cbaxes:
+                colorbar_bbox = colorbar.get_tightbbox(renderer)
+                if colorbar_bbox is not None:
+                    colorbar_boxes.append(colorbar_bbox)
             padding_px = 6 * fig.dpi / 72
             left = max(.01, min(.45, (padding_px + max(0, plot.x0 - bbox.x0)) / fig.bbox.width))
-            bottom = max(.02, min(.5, (padding_px + max(0, plot.y0 - bbox.y0)) / fig.bbox.height))
-            top = max(bottom + .2, min(.99, 1 - (padding_px + max(0, bbox.y1 - plot.y1)) / fig.bbox.height))
+            bottom_overflow = max(
+                [max(0, plot.y0 - bbox.y0)] +
+                [max(0, plot.y0 - box.y0) for box in colorbar_boxes]
+            )
+            top_overflow = max(
+                [max(0, bbox.y1 - plot.y1)] +
+                [max(0, box.y1 - plot.y1) for box in colorbar_boxes]
+            )
+            bottom = max(.02, min(.5, (padding_px + bottom_overflow) / fig.bbox.height))
+            top = max(bottom + .2, min(.99, 1 - (padding_px + top_overflow) / fig.bbox.height))
             reserved_px = padding_px
             if legend_above:
                 top = min(top, 1 - (
@@ -206,10 +269,16 @@ class FigureLayoutOptimizer:
                     + 14 * fig.dpi / 72
                 ) / fig.bbox.height)
             elif outside:
-                reserved_px += legend.get_window_extent(renderer).width + 4 * fig.dpi / 72
-            if cbaxes:
-                reserved_px += cbaxes[0].get_tightbbox(renderer).width + 4 * fig.dpi / 72
-            right = max(left + .2, min(.99, 1 - reserved_px / fig.bbox.width))
+                legend_gap_px = (
+                    4 + legend.borderaxespad * legend.prop.get_size_in_points()
+                ) * fig.dpi / 72
+                reserved_px += legend.get_window_extent(renderer).width + legend_gap_px
+            reserved_px += sum(box.width + 4 * fig.dpi / 72 for box in colorbar_boxes)
+            right_overflow = max(0, bbox.x1 - plot.x1)
+            right = max(
+                left + .2,
+                min(.99, 1 - (reserved_px + right_overflow) / fig.bbox.width),
+            )
             padding = (
                 max(0, plot.x0 - bbox.x0) / fig.bbox.width,
                 max(0, bbox.x1 - plot.x1) / fig.bbox.width,
@@ -244,4 +313,5 @@ class FigureLayoutOptimizer:
                 cwidth = min(.035, max(.018, cb.get_position().width))
                 cb.set_position((right + 4 * fig.dpi / 72 / fig.bbox.width,
                                  bottom, cwidth, top - bottom))
+                self._fit_colorbar_x_ticks(cb)
         return self.measure()

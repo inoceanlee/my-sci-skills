@@ -3,16 +3,22 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import os
 from pathlib import Path
 import re
+import tempfile
 import warnings
 from tempfile import TemporaryDirectory
+from xml.etree import ElementTree
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from .audit import ExportAudit, LayoutValidationError
+from .audit import (
+    ExportAudit, GeometryAuditor, GeometryIssue, GeometryResult,
+    LayoutValidationError,
+)
 from .annotations import place_annotations
 from .layout import FigureLayoutOptimizer, LayoutPolicy
 from .nature import audit_nature_pdf
@@ -92,6 +98,72 @@ class FigureExporter:
             root = updated
         path.write_text(text[:match.start()] + root + text[match.end():], encoding="utf-8")
 
+    @staticmethod
+    def _candidate_policies(policy):
+        policies = [policy]
+        if policy.mode == "preserve" or policy.legend == "fixed":
+            return policies
+        for legend in ("outside", "inside", "auto"):
+            if legend == policy.legend or any(item.legend == legend for item in policies):
+                continue
+            policies.append(replace(policy, legend=legend))
+            if len(policies) == 5:
+                break
+        return policies
+
+    @staticmethod
+    def _candidate_score(geometry, metrics):
+        unauditable = sum(
+            issue.code == "GEOMETRY_NOT_AUDITABLE" for issue in geometry.issues
+        )
+        hard_issues = sum(
+            issue.code != "GEOMETRY_NOT_AUDITABLE" for issue in geometry.issues
+        )
+        clearance_deficit = sum(issue.gap_deficit_pt or 0 for issue in geometry.issues)
+        plot_fraction = metrics.plot_area_fraction if metrics is not None else 0
+        return (
+            unauditable, hard_issues, geometry.clipping_count or 0,
+            clearance_deficit, -plot_fraction,
+        )
+
+    @staticmethod
+    def _verify_export(path: Path, image_format: str, preset: FigurePreset) -> None:
+        if not path.is_file() or path.stat().st_size == 0:
+            raise LayoutValidationError(["EMPTY_EXPORT"])
+        if image_format == "png":
+            from PIL import Image
+
+            with Image.open(path) as image:
+                if image.format != "PNG" or image.size != (preset.width_px, preset.height_px):
+                    raise LayoutValidationError(["PNG_METADATA_MISMATCH"])
+                image.verify()
+        elif image_format == "svg":
+            root = ElementTree.parse(path).getroot()
+            width = root.attrib.get("width", "")
+            height = root.attrib.get("height", "")
+            view_box = root.attrib.get("viewBox", "").split()
+            try:
+                width_mm = float(width.removesuffix("mm"))
+                height_mm = float(height.removesuffix("mm"))
+                view_values = tuple(float(value) for value in view_box)
+            except ValueError as error:
+                raise LayoutValidationError(["SVG_METADATA_INVALID"]) from error
+            if (not width.endswith("mm") or not height.endswith("mm") or
+                    abs(width_mm - preset.width_mm) > .001 or
+                    abs(height_mm - preset.height_mm) > .001 or
+                    len(view_values) != 4 or any(value <= 0 for value in view_values[2:])):
+                raise LayoutValidationError(["SVG_METADATA_MISMATCH"])
+        else:
+            from pypdf import PdfReader
+
+            reader = PdfReader(str(path))
+            if len(reader.pages) != 1:
+                raise LayoutValidationError(["PDF_PAGE_COUNT_MISMATCH"])
+            page = reader.pages[0]
+            if (abs(float(page.mediabox.width) - preset.width_in * 72) > .05 or
+                    abs(float(page.mediabox.height) - preset.height_in * 72) > .05):
+                raise LayoutValidationError(["PDF_METADATA_MISMATCH"])
+
     def export(
         self,
         fig,
@@ -117,40 +189,129 @@ class FigureExporter:
             raise LayoutValidationError(["NO_MAIN_AXES"])
         if len(axes) > 1 and not allow_subplots:
             raise LayoutValidationError(["MULTIPLE_MAIN_AXES"])
+        policy = layout_policy if layout_policy is not None else LayoutPolicy()
+        if not isinstance(policy, LayoutPolicy):
+            raise TypeError("layout_policy must be LayoutPolicy")
+        annotations = tuple(annotations)
 
-        duplicate = deepcopy(fig)
-        axis_ranges: dict[str, tuple[float, float]] = {}
-        layout_metrics = None
+        working = deepcopy(fig)
+        duplicate = None
+        temporary_output = None
         nature_result = None
         try:
-            duplicate.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
-            axis_ranges = self._apply_range_policy(duplicate, range_policy)
-            duplicate.set_dpi(canvas.dpi)
-            policy = layout_policy if layout_policy is not None else LayoutPolicy()
-            if not isinstance(policy, LayoutPolicy):
-                raise TypeError("layout_policy must be LayoutPolicy")
+            working.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
+            axis_ranges = self._apply_range_policy(working, range_policy)
+            working.set_dpi(canvas.dpi)
+            candidate_policies = self._candidate_policies(policy)
+            best = None
+            last_error = None
+            auditor = GeometryAuditor()
+            for candidate_policy in candidate_policies:
+                candidate = deepcopy(working)
+                candidate_axes = self._primary_axes(candidate)
+                metrics = None
+                try:
+                    if len(candidate_axes) == 1:
+                        optimizer = FigureLayoutOptimizer(candidate, candidate_axes[0])
+                        metrics = optimizer.optimize(candidate_policy)
+                    if annotations:
+                        place_annotations(candidate_axes[0], annotations)
+                    if len(candidate_axes) == 1:
+                        geometry = auditor.audit(
+                            candidate, candidate_axes[0],
+                            protected_areas=candidate_policy.protected_areas,
+                        )
+                    else:
+                        geometry = GeometryResult(
+                            "not_auditable",
+                            (GeometryIssue(
+                                "GEOMETRY_NOT_AUDITABLE", ("multiple_main_axes",), ()
+                            ),),
+                            (), None, None,
+                        )
+                except LayoutValidationError as error:
+                    last_error = error
+                    plt.close(candidate)
+                    continue
+                except ValueError as error:
+                    if str(error) not in ("PROTECTED_AREA_INVALID", "PROTECTED_AREA_CONFLICT"):
+                        raise
+                    details = tuple(
+                        GeometryIssue(
+                            str(error), (area.id,),
+                            ((area.x_pt, area.y_pt, area.width_pt, area.height_pt),),
+                        )
+                        for area in candidate_policy.protected_areas
+                    )
+                    last_error = LayoutValidationError([str(error)], details)
+                    plt.close(candidate)
+                    continue
+
+                score = self._candidate_score(geometry, metrics)
+                if best is None or score < best[0]:
+                    if best is not None:
+                        plt.close(best[1])
+                    best = (score, candidate, geometry, metrics)
+                else:
+                    plt.close(candidate)
+            if best is None:
+                if last_error is not None:
+                    raise last_error
+                raise LayoutValidationError(["NO_LAYOUT_CANDIDATE"])
+
+            _, duplicate, geometry, metrics = best
+            hard_issues = tuple(
+                issue for issue in geometry.issues
+                if issue.code != "GEOMETRY_NOT_AUDITABLE"
+            )
+            if hard_issues:
+                raise LayoutValidationError(
+                    tuple(dict.fromkeys(issue.code for issue in hard_issues)),
+                    hard_issues,
+                )
             if len(self._primary_axes(duplicate)) == 1:
-                layout_metrics = FigureLayoutOptimizer(
+                final_metrics = FigureLayoutOptimizer(
                     duplicate, self._primary_axes(duplicate)[0]
-                ).optimize(policy)
-            if annotations:
-                place_annotations(self._primary_axes(duplicate)[0], annotations)
+                ).measure()
+                layout_metrics = replace(
+                    final_metrics,
+                    collision_count=geometry.collision_count,
+                    clipping_count=geometry.clipping_count or 0,
+                )
+            else:
+                layout_metrics = None
+
+            file_descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{output.name}.", suffix=f".{image_format}",
+                dir=output.parent,
+            )
+            os.close(file_descriptor)
+            temporary_output = Path(temporary_name)
             with warnings.catch_warnings(record=True) as captured:
                 warnings.simplefilter("always")
                 with mpl.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42}):
-                    duplicate.savefig(output, format=image_format, dpi=canvas.dpi, bbox_inches=None)
-            font_warnings = tuple(str(w.message) for w in captured if "missing from font" in str(w.message))
+                    duplicate.savefig(
+                        temporary_output, format=image_format,
+                        dpi=canvas.dpi, bbox_inches=None,
+                    )
+            font_warnings = tuple(
+                str(w.message) for w in captured
+                if "missing from font" in str(w.message)
+            )
             if font_warnings:
-                output.unlink(missing_ok=True)
                 raise LayoutValidationError(["MISSING_FONT_GLYPHS", *font_warnings])
             if image_format == "svg":
-                self._set_svg_mm_size(output, canvas)
+                self._set_svg_mm_size(temporary_output, canvas)
+            self._verify_export(temporary_output, image_format, canvas)
+
             do_nature_audit = (
                 image_format == "pdf" if nature_pdf_audit is None else nature_pdf_audit
             )
             if do_nature_audit:
                 if image_format == "pdf":
-                    nature_result = audit_nature_pdf(output, strict=nature_audit_strict)
+                    nature_result = audit_nature_pdf(
+                        temporary_output, strict=nature_audit_strict
+                    )
                 else:
                     with TemporaryDirectory() as tmp:
                         temporary_pdf = Path(tmp) / "rendered-for-nature-qa.pdf"
@@ -163,26 +324,42 @@ class FigureExporter:
                             temporary_pdf, strict=nature_audit_strict
                         )
                 if nature_audit_strict and nature_result.status != "passed":
-                    output.unlink(missing_ok=True)
                     raise LayoutValidationError([
                         "NATURE_AUDIT_" + nature_result.status.upper(),
                         *nature_result.issues,
                     ])
-        finally:
-            plt.close(duplicate)
 
-        return ExportResult(
-            path=output,
-            format=image_format,
-            preset=preset,
-            width_px=canvas.width_px,
-            height_px=canvas.height_px,
-            audit=ExportAudit(
-                passed=nature_result is None or nature_result.status == "passed",
-                issues=nature_result.issues if nature_result is not None else (),
-                axis_ranges=axis_ranges,
-                layout_metrics=layout_metrics,
-                nature_audit=nature_result,
-                stage="nature_pdf_partial" if nature_result is not None else "geometry_partial",
-            ),
-        )
+            passed = (
+                geometry.status == "passed" and
+                (nature_result is None or nature_result.status == "passed")
+            )
+            os.replace(temporary_output, output)
+            temporary_output = None
+            issue_codes = tuple(issue.code for issue in geometry.issues)
+            if nature_result is not None:
+                issue_codes += nature_result.issues
+            return ExportResult(
+                path=output,
+                format=image_format,
+                preset=preset,
+                width_px=canvas.width_px,
+                height_px=canvas.height_px,
+                audit=ExportAudit(
+                    passed=passed,
+                    issues=issue_codes,
+                    axis_ranges=axis_ranges,
+                    layout_metrics=layout_metrics,
+                    nature_audit=nature_result,
+                    stage="geometry_complete" if geometry.status == "passed"
+                    else "geometry_partial",
+                    geometry_status=geometry.status,
+                    geometry_issues=geometry.issues,
+                    audited_roles=geometry.audited_roles,
+                ),
+            )
+        finally:
+            plt.close(working)
+            if duplicate is not None:
+                plt.close(duplicate)
+            if temporary_output is not None:
+                temporary_output.unlink(missing_ok=True)

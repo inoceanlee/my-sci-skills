@@ -1,5 +1,6 @@
 """Measure physical gaps in the exported Figure rather than image white pixels."""
 
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -7,9 +8,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import pytest
 
-from figure_layout import FigureExporter, LayoutPolicy, ProtectedArea
+from figure_layout import FigureExporter, LayoutPolicy, PRESETS, ProtectedArea
 from figure_layout.layout import FigureLayoutOptimizer
 from figure_layout.audit import GeometryAuditor
 
@@ -24,16 +26,26 @@ def crowded_layout():
     return fig, ax
 
 
+def measure_metrics(fig, preset="single"):
+    measured = deepcopy(fig)
+    canvas = getattr(PRESETS, preset)
+    measured.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
+    measured.set_dpi(canvas.dpi)
+    try:
+        return FigureLayoutOptimizer(measured, measured.axes[0]).measure()
+    finally:
+        plt.close(measured)
+
+
 @pytest.mark.parametrize("preset", ["single", "double"])
 def test_compact_layout_tightens_both_titles_and_outer_margin(preset):
     fig, ax = crowded_layout()
     original = (ax.xaxis.labelpad, ax.yaxis.labelpad, ax.get_position().bounds)
+    preserved = measure_metrics(fig, preset)
     with TemporaryDirectory() as tmp:
         exporter = FigureExporter()
-        preserved = exporter.export(fig, Path(tmp) / "preserve.png", preset=preset,
-                                    layout_policy=LayoutPolicy(mode="preserve"))
         compact = exporter.export(fig, Path(tmp) / "compact.png", preset=preset)
-        a = preserved.audit.layout_metrics
+        a = preserved
         b = compact.audit.layout_metrics
         assert b.axis_title_gaps_pt["x"] < a.axis_title_gaps_pt["x"] - 20
         assert b.axis_title_gaps_pt["y"] < a.axis_title_gaps_pt["y"] - 15
@@ -41,6 +53,7 @@ def test_compact_layout_tightens_both_titles_and_outer_margin(preset):
         assert b.legend_plot_gap_pt is not None
         assert b.legend_plot_gap_pt < a.legend_plot_gap_pt
         assert all(g is not None for g in b.outer_gaps_pt)
+        assert b.outer_gaps_pt[1] >= 5.5
         assert b.clipping_count == 0
         assert (ax.xaxis.labelpad, ax.yaxis.labelpad, ax.get_position().bounds) == original
     plt.close(fig)
@@ -50,25 +63,25 @@ def test_colorbar_gap_is_measured_and_compacted():
     fig, ax = plt.subplots()
     im = ax.imshow(np.arange(16).reshape(4, 4))
     fig.colorbar(im, ax=ax, pad=.30)
+    initial = measure_metrics(fig)
     with TemporaryDirectory() as tmp:
         exp = FigureExporter()
-        initial = exp.export(fig, Path(tmp) / "before.png", kind="heatmap",
-                             layout_policy=LayoutPolicy(mode="preserve"))
-        final = exp.export(fig, Path(tmp) / "after.png", kind="heatmap",
-                           layout_policy=LayoutPolicy(mode="compact"))
-        assert initial.audit.layout_metrics.colorbar_plot_gap_pt is not None
+        final = exp.export(fig, Path(tmp) / "after.png", kind="heatmap")
+        assert initial.colorbar_plot_gap_pt is not None
         assert final.audit.layout_metrics.colorbar_plot_gap_pt is not None
         assert (final.audit.layout_metrics.colorbar_plot_gap_pt <
-                initial.audit.layout_metrics.colorbar_plot_gap_pt)
+                initial.colorbar_plot_gap_pt)
     plt.close(fig)
 
 
 def test_preserve_keeps_user_defined_margins():
     fig, ax = crowded_layout()
-    with TemporaryDirectory() as tmp:
-        result = FigureExporter().export(fig, Path(tmp) / "preserve.svg",
-                                         layout_policy=LayoutPolicy(mode="preserve"))
-        assert result.audit.layout_metrics.plot_area_fraction < .4
+    original = ax.get_position().bounds
+    FigureLayoutOptimizer(fig, ax).optimize(
+        LayoutPolicy(mode="preserve")
+    )
+    assert ax.get_position().bounds == original
+    assert measure_metrics(fig).plot_area_fraction < .4
     plt.close(fig)
 
 
@@ -185,4 +198,62 @@ def test_fixed_legend_stays_in_place_and_conflict_is_reported():
     assert any(item.code == "PROTECTED_AREA_CONFLICT" and
                item.element_ids == ("reserved:legend", "legend:main")
                for item in result.issues)
+    plt.close(fig)
+
+
+def test_compact_layout_accounts_for_overflowing_right_tick_label():
+    fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
+    ax.plot([0, 1], [0, 1])
+    ax.set_xticks([0, 1], ["0", "long right tick label"])
+    ax.set_position((.1, .15, .88, .7))
+
+    FigureLayoutOptimizer(fig, ax).optimize(LayoutPolicy())
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert not any(
+        issue.code in ("GEOMETRY_CLIPPING", "CLEARANCE_VIOLATION") and
+        "canvas:right" in issue.element_ids
+        for issue in result.issues
+    ), result.issues
+    plt.close(fig)
+
+
+def test_compact_layout_accounts_for_colorbar_top_extent():
+    fig, ax = plt.subplots(figsize=(1004 / 300, 709 / 300), dpi=300)
+    sns.heatmap(
+        np.arange(9).reshape(3, 3), ax=ax, cbar=True,
+        cbar_kws={"label": "Correlation"},
+    )
+    ax.set_xlabel("Column")
+    ax.set_ylabel("Row")
+    FigureLayoutOptimizer(fig, ax).optimize(LayoutPolicy())
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert not any(
+        issue.code in ("GEOMETRY_CLIPPING", "CLEARANCE_VIOLATION") and
+        "canvas:top" in issue.element_ids
+        for issue in result.issues
+    ), result.issues
+    plt.close(fig)
+
+
+def test_compact_layout_separates_contour_colorbar_from_x_ticks():
+    fig, ax = plt.subplots(
+        figsize=(PRESETS.single.width_in, PRESETS.single.height_in), dpi=300
+    )
+    x, y = np.meshgrid(np.linspace(-2, 2, 40), np.linspace(-2, 2, 40))
+    image = ax.contourf(x, y, np.exp(-x * x - y * y), levels=10)
+    fig.colorbar(image, ax=ax, label="Intensity (a.u.)")
+    ax.set_xlabel("X position (m)")
+    ax.set_ylabel("Y position (m)")
+
+    FigureLayoutOptimizer(fig, ax).optimize(LayoutPolicy())
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert not any(
+        issue.code == "CLEARANCE_VIOLATION" and
+        "colorbar:1" in issue.element_ids and
+        any(element.startswith("tick:x:") for element in issue.element_ids)
+        for issue in result.issues
+    ), result.issues
     plt.close(fig)

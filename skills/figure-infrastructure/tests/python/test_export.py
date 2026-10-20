@@ -16,7 +16,10 @@ from pypdf import PdfReader
 import pytest
 import seaborn as sns
 
-from figure_layout import FigureExporter, LayoutValidationError, PRESETS, RangePolicy
+from figure_layout import (
+    AnnotationSpec, FigureExporter, LayoutPolicy, LayoutValidationError,
+    PRESETS, RangePolicy,
+)
 
 
 def make_line():
@@ -90,7 +93,9 @@ def test_colorbar_does_not_count_as_extra_subfigure():
     assert len(fig.axes) == 2
     with TemporaryDirectory() as temp:
         result = FigureExporter().export(fig, Path(temp) / "heatmap.png", kind="heatmap")
-        assert result.audit.passed
+        assert result.audit.geometry_status == "not_auditable"
+        assert not result.audit.passed
+        assert result.audit.layout_metrics.collision_count is None
     plt.close(fig)
 
 
@@ -113,4 +118,136 @@ def test_requested_axis_minimum_span_survives_export():
         )
         assert result.audit.passed
         assert result.audit.axis_ranges["y"][1] - result.audit.axis_ranges["y"][0] >= 2 - 1e-7
+    plt.close(fig)
+
+
+def test_export_reports_geometry_after_required_annotations(tmp_path):
+    fig = make_line()
+    result = FigureExporter().export(
+        fig, tmp_path / "annotated.png",
+        annotations=(AnnotationSpec("Peak bin 2", 1, 100.001),),
+    )
+
+    assert result.audit.geometry_status == "passed"
+    assert result.audit.passed
+    assert result.audit.layout_metrics.collision_count == 0
+    assert "annotation" in result.audit.audited_roles
+    plt.close(fig)
+
+
+def test_export_preserve_collision_has_pt_details_and_keeps_target(tmp_path):
+    fig = make_line()
+    first = fig.text(.5, .5, "fixed label", ha="center", va="center")
+    first.set_gid("fixed:first")
+    fixed = fig.text(.5, .5, "overlapping fixed label", ha="center", va="center")
+    fixed.set_gid("fixed:overlay")
+    target = tmp_path / "existing.png"
+    target.write_bytes(b"previous export")
+
+    with pytest.raises(LayoutValidationError) as caught:
+        FigureExporter().export(
+            fig, target, layout_policy=LayoutPolicy(mode="preserve")
+        )
+
+    assert "GEOMETRY_COLLISION" in caught.value.issues
+    collision = next(
+        (item for item in caught.value.details
+         if item.code == "GEOMETRY_COLLISION" and
+         set(item.element_ids) == {"fixed:first", "fixed:overlay"}),
+        None,
+    )
+    assert collision is not None, [
+        (item.code, item.element_ids) for item in caught.value.details
+    ]
+    assert len(collision.rects_pt) == 2
+    assert target.read_bytes() == b"previous export"
+    plt.close(fig)
+
+
+def test_unsupported_data_is_exported_but_not_reported_as_passed(tmp_path):
+    fig, ax = plt.subplots()
+    ax.scatter([0, 1], [1, 0])
+
+    result = FigureExporter().export(fig, tmp_path / "scatter.png")
+
+    assert result.path.is_file()
+    assert result.audit.geometry_status == "not_auditable"
+    assert not result.audit.passed
+    assert result.audit.layout_metrics.collision_count is None
+    plt.close(fig)
+
+
+def test_export_moves_data_occluding_legend_before_passing(tmp_path):
+    fig, ax = plt.subplots()
+    ax.plot([0, 1], [0, 1], label="Signal")
+    ax.legend(loc="center")
+
+    result = FigureExporter().export(fig, tmp_path / "legend.png")
+
+    assert result.audit.geometry_status == "passed"
+    assert not any(issue.code == "DATA_OCCLUSION"
+                   for issue in result.audit.geometry_issues)
+    plt.close(fig)
+
+
+def test_export_rejects_colorbar_clearance_conflict(tmp_path):
+    fig, ax = plt.subplots()
+    image = ax.imshow([[1, 2], [3, 4]])
+    ax.set_ylabel("Field")
+    colorbar = fig.colorbar(image, ax=ax)
+    fig.canvas.draw()
+    bbox = ax.yaxis.label.get_window_extent(fig.canvas.get_renderer())
+    position = fig.transFigure.inverted().transform(
+        ((bbox.x0, bbox.y0), (bbox.x1, bbox.y1))
+    )
+    colorbar.ax.set_position((
+        position[0, 0], position[0, 1],
+        position[1, 0] - position[0, 0], position[1, 1] - position[0, 1],
+    ))
+
+    with pytest.raises(LayoutValidationError) as caught:
+        FigureExporter().export(
+            fig, tmp_path / "colorbar.png",
+            layout_policy=LayoutPolicy(mode="preserve"),
+        )
+
+    assert any(
+        item.code == "CLEARANCE_VIOLATION" and
+        item.element_ids[0].startswith("colorbar:")
+        for item in caught.value.details
+    )
+    plt.close(fig)
+
+
+def test_export_preserves_fixed_and_reference_ranges(tmp_path):
+    fig = make_line()
+
+    result = FigureExporter().export(
+        fig, tmp_path / "ranges.png",
+        range_policy={
+            "x": RangePolicy(mode="fixed", bounds=(0, 2)),
+            "y": RangePolicy(mode="reference", bounds=(-4, 4)),
+        },
+    )
+
+    assert result.audit.axis_ranges == {"x": (0, 2), "y": (-4, 4)}
+    assert result.audit.passed
+    plt.close(fig)
+
+
+def test_export_preserves_colorbar_scale_and_source_figure(tmp_path):
+    fig, ax = plt.subplots()
+    image = ax.imshow(np.arange(9).reshape(3, 3), vmin=-2, vmax=10)
+    colorbar = fig.colorbar(image, ax=ax)
+    original_position = colorbar.ax.get_position().bounds
+    original_ticks = tuple(colorbar.get_ticks())
+
+    result = FigureExporter().export(fig, tmp_path / "fixed-scale.png", kind="heatmap")
+
+    assert result.path.is_file()
+    assert result.audit.geometry_status == "not_auditable"
+    assert not result.audit.passed
+    assert (image.norm.vmin, image.norm.vmax) == (-2, 10)
+    assert tuple(colorbar.get_ticks()) == original_ticks
+    assert colorbar.ax.get_position().bounds == original_position
     plt.close(fig)

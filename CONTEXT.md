@@ -21,18 +21,21 @@
 - 最近修改只调整审计边界，没有更改绘图数据或渲染规则；因此没有重跑视觉图片审查。
 - Plotly 增量遍历最多检查 128 个可见文本、保存 1,024 条碰撞记录、审计 128 条 Trace；Trace 分组序号线性计算并缓存 SVG 组。超限返回 `not_auditable`。
 - Nature PDF FlateDecode 解压大小限制和文本比较复杂度仍是公开发布前处置项。
-- 当前主仓库没有配置 Git remote，项目元数据也未提供 K 仓库地址；远程推送需获得准确目标。
+- 当前主仓库没有配置 Git remote，GitHub 目标名称已定为 `inoceanlee/my-sci-skills`；用户要求先完成 Skills 独立分发设计与实施验收，再发布。
+- 2026-10-21：新设计 `docs/superpowers/specs/2026-10-21-my-sci-skills-distribution-design.md` 与计划 `docs/superpowers/plans/2026-10-21-my-sci-skills-distribution.md` 已写入，待用户审阅；代码、仓库根目录和远端尚未变更。
 - Task 10 和 Task 11 尚未开始。
 
 ## 下一步
 
-- 获取 K 仓库的准确 Git 地址后，将本地 `main` 推送到该仓库。
+1. 用户审阅 Skills 轻量分发和 `my-sci-skills` 更名的设计稿、实施计划。
+2. 审阅通过后，由本地 OMP Agent 按计划移动测试、隔离开发环境、验证单独复制 `skills/` 并更名本地仓库。
+3. 完成 Task 10/11、公开发布前资源安全修复和 CI 验收后，创建 `inoceanlee/my-sci-skills` 公开远端并推送。
 
 ## 用户约束
 
 - Skill 的唯一程序实现放在该 Skill 自己的 `scripts/`。
 - 不修改全局软件环境。Python 依赖只使用项目隔离环境和锁文件。
-- 工作树、测试、浏览器渲染、截图、图表和临时脚本放系统 Temp。
+- 任务工作树、测试渲染、截图、图表和临时脚本放系统 Temp。正式测试源码归仓库根 `tests/`，不放在待分发的 `skills/`。
 - 不把工作树放在 `files` 目录下。
 - 原始 ADC 数据、历史报告和其他科研项目文件只读。
 - 项目公开前检查完整 Git 历史、个人绝对路径、凭据、第三方许可和 Notice。
@@ -147,6 +150,8 @@
 ## 文件入口
 
 - `AGENTS.md`：本仓库实施、隔离环境、测试和发布要求。
+- `docs/superpowers/specs/2026-10-21-my-sci-skills-distribution-design.md`：待审阅的轻量分发与本地仓库更名设计。
+- `docs/superpowers/plans/2026-10-21-my-sci-skills-distribution.md`：对应待审阅的实施计划。
 - Task 6 批准的设计和计划已保存在 Git 历史；完成后依仓库规则清理了工作副本。
 - `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：Task 10/11 范围和发布门槛。
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：基础架构与固定合同。

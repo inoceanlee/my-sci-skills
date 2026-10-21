@@ -8,32 +8,36 @@
 
 - 绘图几何审查 Task 1–6 已合入主分支，基线提交为 `162c003`。
 - 分发计划 Task 1–5 已提交到 `my-sci-skills-distribution`。
-- Task 6 文档、许可证、测试和 bootstrap 退出码修复已完成，最终独立复审无问题。
-- Task 6 尚未提交或合并。任务工作树位于系统 Temp 的 `sci-infrastructure-worktrees/my-sci-skills-distribution`。
-- 主检出当前为 `b4a7a0d0003053107509ce8a382f23b06f9d0c07`，工作区干净。
-- 任务分支已提交 HEAD 为 `11779d1b35fd00e0719df42a9570b9a2ea1cae7b`，另有 Task 6 未提交改动。
-- Task 1 测试迁移提交为 `6ac562f`。Task 2 根开发环境提交为 `bae680a`。
-- Task 3 私有运行时安装器提交为 `705f91a`。Task 4 Skill 入口文档提交为 `b0edfb4`。
-- Task 5 独立分发验收提交为 `d7ead22`。上下文同步提交为 `11779d1`。
-- Python 全量测试为 `283 passed, 1 skipped, 8 subtests passed`，用时 258.61 秒，另有 145 条弃用警告。
-- JavaScript 全量测试为 `70 passed, 0 failed`，用时 13.67 秒。
+- Task 6 主提交 `92d5841` 已快进合入 `main`。
+- 合并后 Python 全量测试发现 2 个许可证字节比较子测试失败。283 项通过，1 项跳过，6 个子测试通过，另有 145 条警告。
+- 根因是 Windows 全局 `core.autocrlf=true` 让根许可证保持 LF、两个子目录许可证检出为 CRLF。
+- Temp 任务分支新增 `.gitattributes` 规则 `LICENSE -text`，禁止 Git 转换许可证字节。
+- 从 Git 索引导出的三份许可证大小均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
+- 许可证专项测试为 `1 passed, 2 subtests passed`。任务分支 Python、JavaScript 全量回归均通过。
+- 任务分支 Python 全量结果为 `283 passed, 1 skipped, 8 subtests passed`，用时 292.33 秒，另有 145 条弃用警告。
+- 任务分支 JavaScript 全量结果为 `70 passed, 0 failed`，用时 146.89 秒。
+- 主检出许可证刷新和 Python、JavaScript 全量回归仍待完成。
+- 当前任务分支从 `92d5841` 增加 `.gitattributes`、计划和上下文改动，尚未提交或合并。
+- 修复差异的独立复审未发现问题。
+- 主检出提交为 `92d5841`，跟踪文件干净。根 `.venv` 和 `node_modules` 已按锁文件创建。
+- 根 `.venv` 使用已有 Python 3.13.16，安装大小为 190,122,258 字节。
+- 根 `node_modules` 安装大小为 19,833,441 字节。旧 Skill 环境仍在原位。
 - 分发测试为 `9 passed, 1 skipped, 4 subtests passed`。
 - 修改后的独立复制、安装、运行、删除和重装测试为 `1 passed`，用时 98.59 秒。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。
 - 52 项未审查结果对应能力矩阵中的 `native_only` 类型。不得把该结果描述为完整自动几何审查通过。
 - 已读取全部 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠。
 - 最新干净 `skills/` 副本为 356,507 字节，低于 2 MiB。副本没有 `.venv`、`node_modules`、`.pytest_cache`、`.runtime`、`tests` 或 `__pycache__`。
-- 两个独立 Skill 目录都带有与根许可证哈希一致的 MIT `LICENSE`。Nature Figure 上游目录保留 Apache-2.0 许可证。
-- 最终独立差异复审在退出码修复后未发现问题。
-- 主检出中的旧 Skill 环境仍在原位，尚未移动。须在合并后按计划移入 Temp 备份。
-- Git 未配置远端。本计划不创建公开仓库或推送。
-- 本地计划已获用户授权。Task 6 提交、合并和 Task 7 目录更名仍待完成。
+- 两个独立 Skill 目录都带有与根许可证相同的 MIT 文本。Nature Figure 上游目录保留 Apache-2.0 许可证。
+- Task 6 退出码修复和许可证换行修复的独立差异复审均未发现问题。
+- Git 无远端。本计划不创建公开仓库或推送。
+- 本地计划已获用户授权。需先合并换行修复并通过主检出全量回归，再继续旧环境清理和 Task 7 更名。
 
 ## 下一步
 
-1. 提交 Task 6，并快进合入主分支。
-2. 验证根开发环境和 Temp Skill 运行环境，再把旧 Skill 环境移入 Temp 备份。
-3. 检查并安全清理旧工作树，再将本地仓库目录更名为 `my-sci-skills`。
+1. 提交 `LICENSE -text` 修复，再快进合入 `main`。
+2. 将主检出三份许可证刷新为索引字节，重跑 Python 与 JavaScript 全量测试。
+3. 验证 Temp Skill 运行环境，再把旧 Skill 环境移入 Temp 备份，并完成本地仓库更名。
 
 ## 用户约束
 
@@ -53,7 +57,7 @@
 ### 分发与运行时
 
 - 分发时只复制 `skills/` 中需要的 Skill 文件夹。
-- 测试、根开发配置和开发依赖不属于 Skill 运行包。
+- 测试、根项目清单和开发依赖不属于 Skill 运行包。
 - `figure-infrastructure` 通过 `scripts/setup/bootstrap.py` 管理自己的 `.runtime/`。
 - Python、Node 模块和 uv/npm 缓存都放在对应 Skill 的 `.runtime/`。
 - `bootstrap check` 不创建运行目录。退出码 `0` 表示就绪，`1` 表示 CLI 输入无效，`2` 表示运行时缺失、无效或安装路径错误。
@@ -61,6 +65,7 @@
 - 安装器不下载 Python，也不修改全局 Python、Node、npm 或包缓存。
 - `py-infrastructure` 只依赖 Python 标准库，无需虚拟环境。
 - 每个 Skill 都携带自己的 MIT 许可证副本，保证单独复制时保留许可文本。
+- `.gitattributes` 使用 `LICENSE -text`，确保 Windows 与 Unix 检出保留相同许可证字节。
 - Nature Figure 上游脚本保留 Apache-2.0 许可，不改成 MIT。
 - `playwright-core` 只用于仓库测试，不属于 Skill 运行依赖。
 - 干净的 `skills/` 目录目标小于或等于 2 MiB。安装后的 `.runtime/` 不计入该限制。
@@ -115,19 +120,21 @@
 - 曲线路径或变换测量失败时，应返回 `not_auditable`。
 - Plotly 可见 `layout.shapes` 不在完整碰撞检查范围内，须降低审查状态。
 - Nature PDF 文本检查出现警告时，不得报告通过。
+- Windows 的 `core.autocrlf=true` 会改变许可证字节。重要复制文件须采用明确的 Git 属性。
 - Windows `npm` 可能解析到 `.cmd` shim。Python subprocess 应通过 Node 调用 `npm-cli.js`。
 - Windows shell 复杂调用使用独立 `.ps1` 文件，避免跨 Shell 引号嵌套。
 - `rtk` 命令须显式指定仓库或工作树目录，不能只依赖外层 cwd。
 
 ## 活跃问题
 
+- 主检出许可证换行刷新和 Python 全量回归待完成。
 - Python 3.14.7 图族测试出现 `itertools.count` deepcopy 错误。Python 3.14 兼容性未解决。
 - Python 顶点上限不保护布局优化器的前置绘制。当前接受为非阻塞限制。
 - Plotly 可选标题曾导致顶部净空 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题，不代表问题已解决。
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- Task 6 合并后仍需移动旧 Skill 环境。Task 7 尚未开始。
+- Task 6 旧 Skill 环境清理和 Task 7 更名尚未完成。
 
 ## 验证入口
 

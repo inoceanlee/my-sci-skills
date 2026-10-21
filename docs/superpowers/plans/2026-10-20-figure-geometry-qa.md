@@ -228,11 +228,11 @@ node --test skills/figure-infrastructure/tests/javascript/*.test.js
 - 能力表按图形家族、后端、导出格式和审查级别记录 `supported/native_only/unsupported`。
 - 每个 `supported` 必须完成该图形定义的必需角色审查。对 `native_only` 可输出图，但 `audit.passed=false`，`geometry_status=not_auditable`。
 
-- [x] **Step 1：专项测试。** Python 16 类及 Plotly 10 类单/双栏与格式测试校验实际状态和必需角色。负例覆盖碰撞、双侧可见刻度、窄线段跨越、分离的 `M` 子路径、长折线拐点、描边半宽相切、标记范围、marker-only 几何、`markevery=1` 全点审查与稀疏 `markevery` 降级、SVG 变换描边与 `non-scaling-stroke`、变换失败、超大路径、无解标注、固定色条冲突、拒绝导出不生成回退 PNG、可见 `layout.shapes` 降级、Nature 文本警告与未知 verdict 降级、调用方无法选择审计脚本目录，以及 Python 超过文本审计上限时返回 `not_auditable`。Matplotlib 三种阶梯样式也验证展开路径能捕捉遮挡。
-- [x] **Step 2：完整回归。** Python 全套 `269 passed`、`145 warnings`；JS 全套 `63 passed`、0 failed。真实导出覆盖 Python 16 类 × 单/双栏 × preserve/compact PNG；Plotly 10 类 × 单/双栏 PNG/SVG，离线且不改源图状态。
+- [x] **Step 1：专项测试。** Python 16 类及 Plotly 10 类单/双栏与格式测试校验实际状态和必需角色。负例覆盖碰撞、双侧可见刻度、窄线段跨越、分离的 `M` 子路径、长折线拐点、描边半宽相切、标记范围、marker-only 几何、`markevery=1` 全点审查与稀疏 `markevery` 降级、SVG 变换描边与 `non-scaling-stroke`、变换失败、超大路径、无解标注、固定色条冲突、拒绝导出不生成回退 PNG、可见 `layout.shapes` 降级、Nature 文本警告与未知 verdict 降级、调用方无法选择审计脚本目录，以及 Python 文本和路径顶点、Plotly 文本及碰撞记录超限时返回 `not_auditable`。Matplotlib 三种阶梯样式也验证展开路径能捕捉遮挡。
+- [x] **Step 2：完整回归。** 最终 Python 全套 `270 passed`、`145 warnings`；JS 全套 `66 passed`、0 failed。真实导出覆盖 Python 16 类 × 单/双栏 × preserve/compact PNG；Plotly 10 类 × 单/双栏 PNG/SVG，离线且不改源图状态。
 - [x] **Step 3：实际视觉验收。** Python 图库生成 64 张 PNG：0 个拒绝导出，12 张完整审查通过，52 张因 `native_only` 诚实标为 `not_auditable`；报告状态为 `incomplete`。Agent 实际读取四张单/双栏 `preserve/compact` 联系表，以及折线、误差带、饼图和圆环图代表图片，未见明显遮挡或裁切。Plotly 生成 40 张 PNG、20 张 SVG；Agent 实际读取全部 40 张 PNG。回归检查 20 张 SVG 的根节点、`viewBox`、尺寸、关键文字、裁切状态和几何审查角色。
 - [x] **Step 4：不变条件。** Python Figure 尺寸、数据轴、线数据和色条状态快照未变；Plotly 结构及固定范围保持，离线浏览器无外网请求；PNG/SVG/PDF 物理尺寸通过完整回归。无法审查的图型明确返回 `not_auditable`，不伪报零冲突。
-- [ ] **Step 5：同步与提交。** `CONTEXT.md` 与本计划已同步。Python `269/269`、JavaScript `63/63` 通过；`git diff --check` 通过。OMP 扫描完整覆盖 22 个变更路径，发现一项中危 `SCI-GEOMETRY-AUDIT-QUADRATIC`；限制文本审查数的回归先红后绿，独立复审无问题。安全修复仍待提交；提交后需重新扫描完整 `main..HEAD`，确认中危问题关闭，再合并。
+- [ ] **Step 5：同步与提交。** 本计划与 `CONTEXT.md` 已同步。完整扫描覆盖至 `426576a` 的 22 个变更路径，发现 Python 路径顶点资源风险与 Plotly 文本碰撞资源风险。修复已完成，Python 全套 `270/270`、JavaScript 全套 `66/66` 通过；定向测试 Python `34/34`、JavaScript `36/36` 通过。独立复审无问题。Python 排版优化器可能在顶点上限审查前绘制，已记录为非阻塞限制。最终安全扫描、提交与合并待完成。
 - **回滚：**回退测试/能力表/上下文提交，不修改旧 Task 9 基线的实际数据或已留存结果。
 
 ## 最终验收门槛

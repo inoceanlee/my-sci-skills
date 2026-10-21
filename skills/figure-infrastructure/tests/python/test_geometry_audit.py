@@ -528,3 +528,40 @@ def test_excess_text_elements_stop_pairwise_audit_at_bound(monkeypatch):
                issue.element_ids == ("text_elements:limit",)
                for issue in result.issues)
     plt.close(fig)
+
+
+def test_excess_line_vertices_are_not_transformed(monkeypatch):
+    import figure_layout.audit as audit_module
+
+    monkeypatch.setattr(
+        audit_module, "_MAX_AUDITED_LINE_VERTICES", 8, raising=False
+    )
+    fig, ax = plt.subplots()
+    line, = ax.plot(range(9), range(9))
+    fig.canvas.draw()
+    renderer_transform = line.get_transform()
+
+    class TransformProbe:
+        calls = 0
+
+        def transform(self, vertices):
+            self.calls += 1
+            return renderer_transform.transform(vertices)
+
+    probe = TransformProbe()
+    monkeypatch.setattr(line, "get_transform", lambda: probe)
+
+    def fail_draw():
+        raise AssertionError("oversized line reached renderer draw")
+
+    monkeypatch.setattr(fig.canvas, "draw", fail_draw)
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "not_auditable"
+    assert result.collision_count is None
+    assert probe.calls == 0
+    assert any(issue.code == "GEOMETRY_NOT_AUDITABLE" and
+               issue.element_ids == ("data:line_vertices:limit",)
+               for issue in result.issues)
+    plt.close(fig)

@@ -247,6 +247,80 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
       });
       assert.equal(result,null);
     });
+    await t.test("bounds visible SVG text collection without eager materialization",async()=>{
+      await resetPlot(page);
+      const result=await page.evaluate(preset=>{
+        const node=document.getElementById("plot");
+        const svg=node.querySelector("svg.main-svg");
+        svg.querySelectorAll("text").forEach(text=>text.remove());
+        const originalQuerySelectorAll=svg.querySelectorAll.bind(svg);
+        let eagerTextQueries=0;
+        svg.querySelectorAll=selector=>{
+          if(selector==="text")eagerTextQueries++;
+          return originalQuerySelectorAll(selector);
+        };
+        for(let index=0;index<129;index++){
+          const text=document.createElementNS("http://www.w3.org/2000/svg","text");
+          text.setAttribute("x","20");
+          text.setAttribute("y","20");
+          text.textContent=`label-${index}`;
+          svg.append(text);
+        }
+        const audit=new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
+        return {audit,eagerTextQueries};
+      },preset);
+      assert.equal(result.eagerTextQueries,0);
+      assert.equal(result.audit.geometryStatus,"not_auditable",JSON.stringify(result.audit));
+      assert.equal(result.audit.collisionCount,null);
+      assert.ok(result.audit.geometryIssues.some(issue=>
+        issue.code==="GEOMETRY_NOT_AUDITABLE"&&
+        issue.elementIds.includes("text_elements:limit")
+      ),JSON.stringify(result.audit.geometryIssues));
+    });
+    await t.test("hidden ancestor text does not consume visible text limit",async()=>{
+      await resetPlot(page);
+      const result=await page.evaluate(preset=>{
+        const node=document.getElementById("plot");
+        const svg=node.querySelector("svg.main-svg");
+        svg.querySelectorAll("text").forEach(text=>text.remove());
+        const hidden=document.createElementNS("http://www.w3.org/2000/svg","g");
+        hidden.style.opacity="0";
+        for(let index=0;index<129;index++){
+          const text=document.createElementNS("http://www.w3.org/2000/svg","text");
+          text.setAttribute("x","20");
+          text.setAttribute("y","20");
+          text.textContent=`hidden-${index}`;
+          hidden.append(text);
+        }
+        svg.append(hidden);
+        return new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
+      },preset);
+      assert.ok(!result.geometryIssues.some(issue=>
+        issue.elementIds.includes("text_elements:limit")
+      ),JSON.stringify(result.geometryIssues));
+      assert.notEqual(result.collisionCount,null);
+    });
+    await t.test("bounds visible text collision issues",async()=>{
+      await resetPlot(page);
+      const result=await page.evaluate(preset=>{
+        const node=document.getElementById("plot");
+        const svg=node.querySelector("svg.main-svg");
+        svg.querySelectorAll("text").forEach(text=>text.remove());
+        for(let index=0;index<128;index++){
+          const text=document.createElementNS("http://www.w3.org/2000/svg","text");
+          text.setAttribute("x","20");
+          text.setAttribute("y","20");
+          text.textContent=`label-${index}`;
+          svg.append(text);
+        }
+        return new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
+      },preset);
+      assert.equal(result.geometryStatus,"not_auditable",JSON.stringify(result));
+      assert.equal(result.collisionCount,null);
+      assert.ok(result.geometryIssues.filter(issue=>
+        issue.code==="GEOMETRY_COLLISION"
+      ).length<=1024);
+    });
     await t.test("marks Plotly spline traces as not auditable",async()=>{
       await resetPlot(page);
       const result=await page.evaluate(async preset=>{

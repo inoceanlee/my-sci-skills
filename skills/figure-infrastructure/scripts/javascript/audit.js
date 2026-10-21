@@ -2,6 +2,8 @@
 
 (function(root){
   const issue=(code,ids,rects,extra={})=>({code,elementIds:ids,rectsPt:rects,...extra});
+  const MAX_AUDITED_TEXT_ELEMENTS=128;
+  const MAX_TEXT_COLLISION_ISSUES=1024;
 
   class PlotlyGeometryAuditor{
     audit(node,preset,protectedAreas=[]){
@@ -92,40 +94,64 @@
         protectedBoxes.push({id:area.id,rect});
       }
       const visible=element=>{
-        const style=element.ownerDocument.defaultView.getComputedStyle(element);
-        return style.display!=="none"&&style.visibility!=="hidden"&&Number(style.opacity)!==0;
+        let current=element;
+        while(current){
+          const style=current.ownerDocument.defaultView.getComputedStyle(current);
+          if(style.display==="none"||style.visibility==="hidden"||
+             style.visibility==="collapse"||Number(style.opacity)===0)return false;
+          current=current.parentElement;
+        }
+        return true;
       };
       const textElements=[];
+      let visibleTextCount=0;
+      let textLimitReached=false;
       let clippingCount=0;
+      let xTickIndex=0,yTickIndex=0;
       const classify=text=>{
         const title=text.closest(".xtitle,.ytitle");
         if(title)return [title.classList.contains("xtitle")?"axis:x_title":"axis:y_title","axis_title"];
-        if(text.closest(".xtick"))return ["tick:x:"+selectAll(".xtick text").indexOf(text),"tick_label"];
-        if(text.closest(".ytick"))return ["tick:y:"+selectAll(".ytick text").indexOf(text),"tick_label"];
+        if(text.closest(".xtick"))return ["tick:x:"+xTickIndex++,"tick_label"];
+        if(text.closest(".ytick"))return ["tick:y:"+yTickIndex++,"tick_label"];
         if(text.closest(".legend"))return ["legend:text:"+text.textContent.trim(),"legend_text"];
         if(text.closest(".colorbar"))return ["colorbar:text:"+text.textContent.trim(),"colorbar_text"];
         if(text.closest(".annotation"))return ["annotation:"+text.textContent.trim(),"annotation"];
         if(text.closest(".gtitle"))return ["figure:title","figure_title"];
         return ["svg:text:"+text.textContent.trim(),"svg_text"];
       };
-      for(const text of selectAll("text")){
-        if(!visible(text)||!text.textContent.trim())continue;
-        const [id,role]=classify(text);
-        const rect=measure(text);
-        if(!rect){unknown.push(id);continue;}
-        roles.add(role);
-        textElements.push({id,role,rect});
-        for(const area of protectedBoxes){
-          const overlap=this.intersection(rect,area.rect);
-          if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
-            [rectPt(area.rect),rectPt(rect)],{
-              overlapPt2:overlap.w*pt*overlap.h*pt
-            }));
+      for(const svgRoot of svgs){
+        const svgDocument=svgRoot.ownerDocument;
+        const nodeFilter=svgDocument.defaultView.NodeFilter;
+        const walker=svgDocument.createTreeWalker(svgRoot,nodeFilter.SHOW_ELEMENT,{
+          acceptNode:element=>element.localName==="text"
+            ?nodeFilter.FILTER_ACCEPT:nodeFilter.FILTER_SKIP
+        });
+        for(let text=walker.nextNode();text;text=walker.nextNode()){
+          if(!visible(text)||!text.textContent.trim())continue;
+          visibleTextCount++;
+          if(visibleTextCount>MAX_AUDITED_TEXT_ELEMENTS){
+            unknown.push("text_elements:limit");
+            textLimitReached=true;
+            break;
+          }
+          const [id,role]=classify(text);
+          const rect=measure(text);
+          if(!rect){unknown.push(id);continue;}
+          roles.add(role);
+          textElements.push({id,role,rect});
+          for(const area of protectedBoxes){
+            const overlap=this.intersection(rect,area.rect);
+            if(overlap)issues.push(issue("PROTECTED_AREA_CONFLICT",[area.id,id],
+              [rectPt(area.rect),rectPt(rect)],{
+                overlapPt2:overlap.w*pt*overlap.h*pt
+              }));
+          }
+          if(!inCanvas(rect)){
+            clippingCount++;
+            issues.push(issue("GEOMETRY_CLIPPING",[id],[rectPt(rect)]));
+          }
         }
-        if(!inCanvas(rect)){
-          clippingCount++;
-          issues.push(issue("GEOMETRY_CLIPPING",[id],[rectPt(rect)]));
-        }
+        if(textLimitReached)break;
       }
 
       const legendElements=[];
@@ -222,26 +248,38 @@
             }));
         }
       }
-      for(let i=0;i<textElements.length;i++){
-        for(let j=i+1;j<textElements.length;j++){
-          const a=textElements[i],b=textElements[j];
-          const overlap=this.intersection(a.rect,b.rect);
-          if(overlap){
+      let textCollisionCount=0;
+      let textCollisionLimitReached=false;
+      if(!textLimitReached){
+        textPairs:
+        for(let i=0;i<textElements.length;i++){
+          for(let j=i+1;j<textElements.length;j++){
+            const a=textElements[i],b=textElements[j];
+            const overlap=this.intersection(a.rect,b.rect);
+            if(!overlap)continue;
+            if(textCollisionCount>=MAX_TEXT_COLLISION_ISSUES){
+              unknown.push("text_collisions:limit");
+              textCollisionLimitReached=true;
+              break textPairs;
+            }
             issues.push(issue("GEOMETRY_COLLISION",[a.id,b.id],
               [rectPt(a.rect),rectPt(b.rect)],{
                 overlapPt2:overlap.w*pt*overlap.h*pt
               }));
+            textCollisionCount++;
           }
         }
       }
-      for(const legend of legendElements){
-        for(const text of textElements){
-          if(text.role==="legend_text")continue;
-          const overlap=this.intersection(legend.rect,text.rect);
-          if(overlap)issues.push(issue("GEOMETRY_COLLISION",[text.id,legend.id],
-            [rectPt(text.rect),rectPt(legend.rect)],{
-              overlapPt2:overlap.w*pt*overlap.h*pt
-            }));
+      if(!textLimitReached&&!textCollisionLimitReached){
+        for(const legend of legendElements){
+          for(const text of textElements){
+            if(text.role==="legend_text")continue;
+            const overlap=this.intersection(legend.rect,text.rect);
+            if(overlap)issues.push(issue("GEOMETRY_COLLISION",[text.id,legend.id],
+              [rectPt(text.rect),rectPt(legend.rect)],{
+                overlapPt2:overlap.w*pt*overlap.h*pt
+              }));
+          }
         }
       }
 
@@ -334,20 +372,22 @@
               break;
             }
           }
-          for(const text of textElements){
-            if(text.role==="legend_text")continue;
-            const textRect=plotRect?this.intersection(text.rect,plotRect):text.rect;
-            if(!textRect)continue;
-            const overlap=this.intersection(rect,textRect);
-            if(!overlap)continue;
-            const hits=lineShape
-              ?this.pathHits(shape,textRect,plotRect,width,height,pathGeometry)
-              :Boolean(overlap);
-            if(hits===null){unknown.push(`${id}:path_geometry`);return;}
-            if(hits)issues.push(issue("DATA_OCCLUSION",[text.id,id],
-              [rectPt(textRect),rectPt(rect)],{
-                overlapPt2:overlap.w*pt*overlap.h*pt
-              }));
+          if(!textLimitReached&&!textCollisionLimitReached){
+            for(const text of textElements){
+              if(text.role==="legend_text")continue;
+              const textRect=plotRect?this.intersection(text.rect,plotRect):text.rect;
+              if(!textRect)continue;
+              const overlap=this.intersection(rect,textRect);
+              if(!overlap)continue;
+              const hits=lineShape
+                ?this.pathHits(shape,textRect,plotRect,width,height,pathGeometry)
+                :Boolean(overlap);
+              if(hits===null){unknown.push(`${id}:path_geometry`);return;}
+              if(hits)issues.push(issue("DATA_OCCLUSION",[text.id,id],
+                [rectPt(textRect),rectPt(rect)],{
+                  overlapPt2:overlap.w*pt*overlap.h*pt
+                }));
+            }
           }
         });
       });

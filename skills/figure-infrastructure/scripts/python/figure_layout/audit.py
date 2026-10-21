@@ -9,6 +9,7 @@ from matplotlib.transforms import Bbox
 from .layout import LayoutMetrics, ProtectedArea
 from .nature import NatureAudit
 
+_MAX_AUDITED_LINE_VERTICES = 100_000
 _MAX_AUDITED_TEXT_ELEMENTS = 128
 
 
@@ -61,7 +62,31 @@ class _Element:
 class GeometryAuditor:
     """Measure supported text and line geometry from Matplotlib's renderer."""
 
+    @staticmethod
+    def exceeds_line_vertex_limit(axes) -> bool:
+        vertex_count = 0
+        for ax in axes:
+            if not ax.get_visible():
+                continue
+            for line in ax.lines:
+                if not line.get_visible():
+                    continue
+                try:
+                    vertex_count += len(line.get_path().vertices)
+                except (AttributeError, TypeError, ValueError, RuntimeError):
+                    return True
+                if vertex_count > _MAX_AUDITED_LINE_VERTICES:
+                    return True
+        return False
+
     def audit(self, fig, ax, protected_areas=()) -> GeometryResult:
+        if self.exceeds_line_vertex_limit((ax,)):
+            return GeometryResult(
+                "not_auditable",
+                (GeometryIssue("GEOMETRY_NOT_AUDITABLE",
+                               ("data:line_vertices:limit",), ()),),
+                (), None, None,
+            )
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
         elements: list[_Element] = []

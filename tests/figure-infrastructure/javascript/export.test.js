@@ -2,7 +2,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { exportScientificFigure } = require("../../scripts/javascript/figure-layout.js");
+const { exportScientificFigure } = require("../../../skills/figure-infrastructure/scripts/javascript/figure-layout.js");
 
 test("PDF export returns an explicit unsupported-format error", async () => {
   await assert.rejects(

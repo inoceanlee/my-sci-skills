@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "python"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "skills" / "figure-infrastructure" / "scripts" / "python"))
 
 from figure_layout import PRESETS, RangePolicy, resolve_range
 
@@ -53,6 +53,9 @@ class RangeTests(unittest.TestCase):
         self.assertEqual((PRESETS.double.width_px, PRESETS.double.height_px), (2126, 1241))
         self.assertEqual(PRESETS.single.dpi, 300)
 
-
+    def test_skill_source_resolves_from_repository_root_after_migration(self):
+        repository_root = Path(__file__).resolve().parents[3]
+        skill_source = repository_root / "skills" / "figure-infrastructure" / "scripts" / "python"
+        self.assertTrue((skill_source / "figure_layout" / "__init__.py").is_file())
 if __name__ == "__main__":
     unittest.main()

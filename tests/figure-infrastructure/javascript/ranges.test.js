@@ -1,7 +1,9 @@
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveRange, PRESETS } = require("../../scripts/javascript/ranges.js");
+const fs = require("node:fs");
+const path = require("node:path");
+const { resolveRange, PRESETS } = require("../../../skills/figure-infrastructure/scripts/javascript/ranges.js");
 
 test("auto tightens while retaining finite data", () => {
   const [lo, hi] = resolveRange([12, 14], { mode: "auto" });
@@ -40,4 +42,21 @@ test("large typed arrays retain all samples without argument overflow", () => {
   for (let i = 0; i < samples.length; i++) samples[i] = 12 + (i % 100);
   const [lo, hi] = resolveRange(samples);
   assert.ok(lo < 12 && hi > 111);
+});
+test("offline gallery resolves after test migration", () => {
+  const repositoryRoot = path.resolve(__dirname, "../../../");
+  const galleryPath = path.resolve(__dirname, "../fixtures/gallery.html");
+  assert.equal(
+    path.relative(repositoryRoot, galleryPath).replaceAll(path.sep, "/"),
+    "tests/figure-infrastructure/fixtures/gallery.html"
+  );
+
+  const html = fs.readFileSync(galleryPath, "utf8");
+  const scriptPaths = [...html.matchAll(/<script src="([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((src) => src.includes("scripts/javascript/"));
+  assert.equal(scriptPaths.length, 5);
+  for (const src of scriptPaths) {
+    assert.ok(fs.existsSync(path.resolve(path.dirname(galleryPath), src)), src);
+  }
 });

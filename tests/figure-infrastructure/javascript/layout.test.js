@@ -1,8 +1,8 @@
 "use strict";
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
-const {candidatePlotlyLayouts, prepareCompactLayout, adjustPlotlyLayoutForGeometry} = require("../../scripts/javascript/layout.js");
-const {ScientificFigureExporter} = require("../../scripts/javascript/figure-layout.js");
+const {candidatePlotlyLayouts, prepareCompactLayout, adjustPlotlyLayoutForGeometry} = require("../../../skills/figure-infrastructure/scripts/javascript/layout.js");
+const {ScientificFigureExporter} = require("../../../skills/figure-infrastructure/scripts/javascript/figure-layout.js");
 
 test("compact mode reduces all excessive margins and axis title standoff", () => {
   const source = {

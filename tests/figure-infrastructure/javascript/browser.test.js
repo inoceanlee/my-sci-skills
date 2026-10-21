@@ -10,6 +10,10 @@ const executablePath = process.env.SCI_TEST_BROWSER
   || "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const pagePath = pathToFileURL(path.join(__dirname, "..", "fixtures", "gallery.html")).href;
 
+test("Plotly resolves from the repository development dependencies", () => {
+  assert.ok(require.resolve("plotly.js-dist-min"));
+});
+
 test("offline PNG and SVG export preserves source Plotly state", async () => {
   const browser = await chromium.launch({executablePath, headless:true});
   try {

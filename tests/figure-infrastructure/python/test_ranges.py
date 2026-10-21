@@ -1,6 +1,7 @@
 """Scientifically safe axis ranges and publication dimensions."""
 
 import math
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -57,5 +58,23 @@ class RangeTests(unittest.TestCase):
         repository_root = Path(__file__).resolve().parents[3]
         skill_source = repository_root / "skills" / "figure-infrastructure" / "scripts" / "python"
         self.assertTrue((skill_source / "figure_layout" / "__init__.py").is_file())
+
+    def test_root_development_manifests_exist(self):
+        repository_root = Path(__file__).resolve().parents[3]
+        for manifest in ("pyproject.toml", "uv.lock", "package.json", "package-lock.json"):
+            with self.subTest(manifest=manifest):
+                self.assertTrue((repository_root / manifest).is_file())
+
+    def test_root_environment_imports_skill_source_editably(self):
+        repository_root = Path(__file__).resolve().parents[3]
+        result = subprocess.run(
+            [sys.executable, "-c", "import figure_layout; print(figure_layout.__file__)"],
+            cwd=repository_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        expected = repository_root / "skills" / "figure-infrastructure" / "scripts" / "python" / "figure_layout" / "__init__.py"
+        self.assertEqual(Path(result.stdout.strip()).resolve(), expected.resolve())
 if __name__ == "__main__":
     unittest.main()

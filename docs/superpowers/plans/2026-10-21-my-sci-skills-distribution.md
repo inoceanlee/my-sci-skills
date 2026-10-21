@@ -4,9 +4,9 @@
 >
 > **状态：待用户审阅。当前不授权程序实施、更名、删除环境或公开推送。**
 
-**Goal:** 将科研 Skills 的开发资产与可分发内容分离，复制 `skills/` 后通过独立环境安装保持全部已实现能力，并将项目与本地目录统一更名为 `my-sci-skills`。
+**Goal:** 将科研 Skills 的开发资产与可分发内容分离，复制 `skills/` 后在每个 Skill 的 `.runtime/` 内安装运行依赖，并将项目与本地目录统一更名为 `my-sci-skills`。
 
-**Architecture:** 保持现有两个 Skill 的 `scripts/` 源码、公开 API 与能力边界不变；测试移到根目录，运行依赖元数据留在 Skill；每个 Skill 单独部署，运行时依赖装在 Skill 外；仅本地完整验收后更名。GitHub 公开发布为独立验收关口。
+**Architecture:** 保持现有两个 Skill 的 `scripts/` 源码、公开 API 与能力边界不变；测试移到根目录，运行依赖清单留在 Skill；每个 Skill 通过本目录下的 `.runtime/` 独立安装和卸载。GitHub 公开发布为独立验收关口。
 
 **Tech Stack:** Python 3.12–3.14、uv、pytest、Matplotlib/Seaborn、Plotly.js、Node.js 20+、npm、Playwright Core（开发测试）、PowerShell/Git。
 
@@ -14,27 +14,28 @@
 
 ## 用户阅读区
 
-### 本计划不会动的部分
 
-- 科研绘图数据、范围、色标、标注与原有 270 Python / 68 JS 测试的语义。
-- 两个 Skill ID：`py-infrastructure`、`figure-infrastructure`。
-- Python `figure_layout` 导入、内部发行包名 `sci-figure-infrastructure` 与 JS `exportScientificFigure`。
-- 雷达研究文件、用户全局安装环境、其它已安装 Agent Skills。
-- 公共 GitHub 仓库：本轮规划不创建。需完成后续公开发布验收再执行。
+### 核心方案
 
-### 阶段与结束条件
+**Skill 自带私有运行环境，不打包依赖。** 将 `skills/` 复制到其它设备，第一次安装依赖会在对应 Skill 内生成 `.runtime/`。删除整个 Skill 文件夹，源码、虚拟环境和专属下载缓存一起消失。
 
-| 任务 | 独立交付 | 判定成功 |
-| --- | --- | --- |
-| 1 | 测试/样例迁至仓库根目录 | 原测试的发现、导入、浏览器夹具路径恢复，运行代码无修改 |
-| 2 | 根目录隔离开发环境 | 根锁文件可重建，全部历史测试继续通过 |
-| 3 | Skill 运行依赖与轻量部署入口 | 运行依赖留在 Skill 内，开发依赖不污染分发内容 |
-| 4 | `SKILL.md` 与部署说明 | 用户只读 Skill 文档即可获得准确的调用步骤和错误说明 |
-| 5 | 仅复制 `skills/` 的黑盒验收 | Temp 环境不依赖原仓库，两个 Skill 都能运行 |
-| 6 | 清理本机 Skill 环境、同步文档、最终复审 | `skills/` 实际内容 ≤2 MiB；完整回归与视觉验收通过 |
-| 7 | 本地项目更名为 `my-sci-skills` | Git 状态干净，工作树/路径正常；不提前创建远端 |
+- `py-infrastructure` 不需要安装第三方环境。
+- `figure-infrastructure` 的 Python/Plotly 依赖分别安装在 `.runtime/python/` 与 `.runtime/javascript/`；不修改全局 Python/Node。
+- GitHub 分发的是**未安装依赖的轻量源码**（目标 ≤2 MiB）；每个用户实际安装后体积可超过 200 MiB。
+- 系统原有 Python、uv、Node/npm、浏览器仍由用户提供；已安装的虚拟环境不保证跨机器/移动路径后可用，应重建。
+- 测试、开发依赖和视觉脚本搬到仓库根目录；本地仓库最终更名为 `my-sci-skills`。
 
-任务 1–6 使用普通隔离 Git 任务分支分步提交，完整验收后快进合并 `main`。任务 7 只在合并、清理工作树并确认 Windows 未锁定后执行。
+### 实施安排
+
+| 阶段 | 核心结果 |
+| --- | --- |
+| 1–2 | 测试迁至根目录，并重建开发环境 |
+| 3–4 | Skill 内置 `.runtime/` 部署入口和 `SKILL.md` |
+| 5 | 只复制 `skills/`，在新目录内安装、运行、删除并验收 |
+| 6 | 完整测试、图像检查及清理旧环境 |
+| 7 | 本地仓库目录更名为 `my-sci-skills` |
+
+**只有设计和计划审核通过后，本地 OMP Agent 才能开始实施。** GitHub 公开创建与推送仍等待发布安全/CI 验收。
 
 ## Agent 阅读区
 
@@ -42,11 +43,11 @@
 
 1. 实施前读取全局 `AGENTS.md` / `RULES.md`、仓库 `AGENTS.md` / `CONTEXT.md`、本计划与设计、原有项目设计；记录当前 SHA 和工作树状态。
 2. 只修改计划列出的开发布局、部署入口和文档；不修改 Python/JS 核心绘图算法及原始数据。
-3. 当前基线 `main@625d538`，原历史测试 `270 Python passed（145 warnings）`、`68 JS passed`，新测试项数可增加，不允许删减旧测试。
-4. `skills/` 下只允许 `SKILL.md`、`scripts/`、`references/` 和四份必要 Python/JS 运行 manifest/lock；禁止 `tests/`、`.venv/`、`node_modules/`、`.pytest_cache/`。
-5. Skill 分发目录在无外部开发文件时应 ≤2 MiB；运行依赖本身可大于该值，但应安装到隔离缓存而非分发目录。
+3. 原几何验收提交 `625d538`；实施前以当前 `main` HEAD 为任务起点，不使用旧 SHA 覆盖新提交。原历史测试 `270 Python passed（145 warnings）`、`68 JS passed`；可增加新测试，不允许删减旧测试。
+4. `skills/` 的干净分发包只允许 `SKILL.md`、`scripts/`、`references/` 和必要运行 manifests/lock；安装后可出现 Git 忽略的 `.runtime/`。禁止分发 `tests/`、旧 `.venv/`、旧 `node_modules/`、`.pytest_cache/`。
+5. **干净分发副本**的 `skills/` 应 ≤2 MiB；安装后的 `.runtime/` 可超过 200 MiB，不计入前者；卸载必须删除整个 Skill 内的依赖环境和专属下载缓存。
 6. `py-infrastructure` 保持纯标准库；`figure-infrastructure` 的 Python 支持 `>=3.12,<3.15`，JS 要求 Node.js `>=20` 与已有浏览器/DOM。
-7. `uv`、`npm` 只在用户授权后安装进指定隔离环境；不执行全局安装/升级；脚本 `check` 不产生任何副作用。
+7. `uv`、`npm` 仅在用户显式调用安装时运行；Python/JS 依赖和 uv/npm 下载缓存仅写入目标 Skill 的 `.runtime/`。不安装/更新全局工具；`check` 全程只读。
 8. 运行 Python 绘图先以 `uv` 锁文件验证依赖；JS 运行 `plotly.js-dist-min@4.1.2`，开发浏览器验证 `playwright-core@1.64.1`。
 9. PNG 单栏 1004×709、双栏 2126×1241；Python PNG/SVG/PDF 与 Plotly PNG/SVG；原图、科学数值与 `native_only` 审查语义保持不变。
 10. 当前 Windows 实机视觉验证必须实际读取导出图片。Linux 上的复测由后续 CI 阶段完成，不能提前宣称通过。
@@ -67,9 +68,9 @@
 
 1. 源码仍依赖旧 `tests/` 相对层级：Task 1 给出所有指定测试与离线 HTML 的新路径、负例。
 2. 双份 Python/JS 锁文件不匹配或开发依赖误入 Skill：Task 2/3 对安装清单、版本及 import 路径做断言。
-3. 仅复制 `skills/` 时被原仓库 Python/Node 缓存暗中满足：Task 5 使用隔离复制和路径检查，负例先失败。
+3. 只复制 `skills/` 时被原仓库/全局环境暗中满足依赖，或者源码安装在旧路径：Task 5 要求全新 Temp 副本内部 `.runtime/`，检查真实路径，且搬动后必须重建。
 4. Windows 重命名时还有已注册工作树或终端锁：Task 7 检查路径、锁与 Git 元数据，任何冲突明确停止。
-5. Skill `check` 修改本机文件，或 `install` 修改全局环境：Task 3/5 用文件快照、进程命令记录、受控缓存路径断言。
+5. `check` 写入文件、`install` 向 Skill 之外写依赖和下载缓存，或删除 Skill 后残留运行环境：Task 3/5 添加进程路径/文件快照、卸载测试。
 
 ---
 
@@ -109,7 +110,7 @@
 - Root `package.json`: `name="my-sci-skills-dev", private=true, type="commonjs", scripts.test="node --test tests/figure-infrastructure/javascript/*.test.js"`，`devDependencies.playwright-core="1.64.1"`、`plotly.js-dist-min="4.1.2"`。
 
 - [ ] **Step 1：红测。** 编写“根锁文件缺失/Node 测试找不到根依赖则失败”的检查；确认当前项目缺少根配置、测试失败。
-- [ ] **Step 2：实现。** 按接口创建根配置；使用已批准的项目隔离 `uv lock` / `npm install --package-lock-only` 更新根锁。开发 `.venv` 放根目录，`node_modules` 放根目录，不触碰全局工具目录。不要更改现有 Skill 依赖清单。
+- [ ] **Step 2：实现。** 按接口创建根配置；使用项目隔离 `uv lock` / `npm install --package-lock-only` 更新根锁。在仓库根 `.gitignore` 明确增加 `.runtime/` 忽略项并用 `git check-ignore skills/figure-infrastructure/.runtime/...` 验证。开发 `.venv` 放根目录，`node_modules` 放根目录，不触碰全局工具目录。不要更改现有 Skill 依赖清单。
 - [ ] **Step 3：绿测。** `uv sync --locked --group dev` 后从根 `.venv` 测试 `figure_layout` 导入位置为 `skills/figure-infrastructure/scripts/python/figure_layout`；`npm ci` 后 `npm test`，浏览器离线 fixture 全部资源为本地文件。
 - [ ] **Step 4：完整回归。** `.venv/Scripts/python.exe -m pytest tests/figure-infrastructure/python tests/py-infrastructure -q`（Windows）；`npm test`。预期原合同全部仍通过；不足计为失败，不改绘图测试的审查预期。
 - [ ] **Step 5：审查、提交。** 检查新锁均可重建，无私有镜像地址/个人路径/凭据，提交 `build(dev): isolate repository test environments`。
@@ -125,12 +126,12 @@
 **Interfaces**
 - 保留 Python 现有运行依赖和 `packages=["scripts/python/figure_layout"]`；从运行项目中移出 `pytest` 开发组；锁定 Python 版本 `>=3.12,<3.15`。
 - Skill JS manifest: `name="sci-figure-infrastructure"`、`version="0.1.0"`、`private=true`、`type="commonjs"`、`dependencies={"plotly.js-dist-min":"4.1.2"}`；无 `devDependencies` 与测试命令。
-- `bootstrap.main(argv: Sequence[str] | None = None) -> int`；支持 `check/install`、`--component python|javascript|all`、`--cache-dir`。
+- `bootstrap.main(argv: Sequence[str] | None = None) -> int`；支持 `check/install`、`--component python|javascript|all`，无外部 `--cache-dir`，默认且唯一受管目标为本 Skill 内 `.runtime/`。
 
-- [ ] **Step 1：红测。** 运行 `test_standalone_skills.py::test_skill_manifest_runtime_only`，验证不存在 `playwright-core`、`pytest` 运行依赖；`test_bootstrap_check_is_read_only` 确认 check 在空 Temp 缓存中不写目录；`test_bootstrap_install_isolated` 拒绝系统级安装/错误环境路径。修改前预期失败。
+- [ ] **Step 1：红测。** `test_skill_manifest_runtime_only` 验证运行清单不含 `playwright-core/pytest`；`test_bootstrap_check_is_read_only` 断言空 `.runtime/` 不被创建；`test_bootstrap_install_isolated` 禁止在 Skill 外安装/写下载缓存；`test_bootstrap_uninstall_by_deletion` 验证复制 Skill 删除后环境同步消失。当前旧代码预期失败。
 - [ ] **Step 2：实现运行 manifests。** 更新两个 Skill 锁文件，核对根测试锁与 Skill 运行锁中公用运行包版本；不得将 Plotly JS 库内容写入 Git；不改变源代码模块导入名。
-- [ ] **Step 3：实现 `bootstrap.py`。** 标准库 `BootstrapManager` 管理配置与子进程；`check` 退出码 0/1/2 与错误原因遵守设计；`install` 按用户明确选择调用 `uv sync --locked --no-dev` 和外部缓存 `npm ci --omit=dev`。Python 路径使用 `UV_PROJECT_ENVIRONMENT`，JS 先把两个 manifests 复制到缓存后执行 npm；校验真实 Python import 和 Plotly JS 文件存在再写 `installation.json`。
-- [ ] **Step 4：绿测。** 跑部署专项（mock 子进程阻止全局写入）和真实安装到 Temp 缓存的端到端 `check→install→check`。用失败的 uv/npm 命令验证非零退出码、可读错误、原文件不受损。
+- [ ] **Step 3：实现 `bootstrap.py`。标准库 `BootstrapManager` 由 `Path(__file__).resolve().parents[2]` 定位本 Skill；`check` 返回 0/1/2 且只读。`install` 仅创建 `<skill>/.runtime/`，Python 设置 `UV_PROJECT_ENVIRONMENT=<skill>/.runtime/python/.venv`、`UV_CACHE_DIR=<skill>/.runtime/cache/uv`，运行 `uv sync --project <skill> --locked --no-dev --no-managed-python`；JS 复制两份运行 manifest 到 `.runtime/javascript/`，设置 `npm_config_cache=<skill>/.runtime/cache/npm` 并 `npm ci --prefix <skill>/.runtime/javascript --omit=dev`。不得下载全局 Python/浏览器；真实校验 `figure_layout` 导入路径、`plotly.min.js` 后写状态文件。
+- [ ] **Step 4：绿测。** 运行隔离安装专项的红绿测试：空目录 `check` 不写文件，`install` 只在本 Skill 创建 `.runtime/` 和下载缓存，`check→install→check` 状态正确；损坏锁文件、uv/npm 不可用或安装失败必须说明具体错误，不能更改全局环境。
 - [ ] **Step 5：完整回归与提交。** Python+JS 全量继续通过；`git diff --check`。提交 `feat(skills): bootstrap isolated runtime dependencies`。
 - **回滚：**撤销本任务运行配置与安装入口；之前的开发环境不受影响。
 
@@ -159,13 +160,13 @@
 
 **Interfaces**
 - `run_distribution_smoke(source_skills: Path, target_temp: Path, components: tuple[str,...]) -> DistributionReport` 仅用于开发测试，不移入 Skill。
-- `DistributionReport` 包括 `copied_skills_path`、`runtime_cache_path`、`python_import_path`、`js_bundle_path`、`artifacts`、`audit_statuses` 与 `external_repo_references`。
+- `DistributionReport` 包括 `copied_skills_path`、`runtime_path`（始终位于 `copied_skills_path/figure-infrastructure/.runtime`）、`python_import_path`、`js_bundle_path`、`artifacts`、`audit_statuses` 和 `external_repo_references`。
 
-- [ ] **Step 1：失败测试。** Temp 随机目录仅复制 `skills/`。隔离子进程移除原仓库环境的 `PYTHONPATH`、`NODE_PATH` 等，拒绝导入原路径；首次 `check` 报缺少依赖或缓存，输出不可当作完成。
-- [ ] **Step 2：实际安装。** 经既有授权只在 Temp 缓存执行 `bootstrap install`，模拟一个没有原仓库的用户。校验安装过程只改变 Temp 缓存；目录和系统全局工具均无改动。
-- [ ] **Step 3：Python 运行测试。** 单独 `py-infrastructure` 全合同，figure 从 Temp 虚拟环境导入，导出 1004×709 PNG、2126×1241 SVG/PDF；验证尺寸与审查状态，不修改原图或数据。
-- [ ] **Step 4：JS 运行测试。** 从 Temp 安装的 `plotly.min.js` 和复制的五个脚本构造离线浏览器页面。断网导出单/双栏 PNG/SVG，检查 `audit`、PNG/SVG 元数据、原 Plotly 状态不变。必须打印所有被读取脚本的真实路径，确保不落回源仓库。
-- [ ] **Step 5：复查与提交。** 正反测试（缺依赖、离线无缓存、安装失败、损坏锁文件、不可审查图形）均通过，提交 `test(skills): verify copied skills work independently`。
+- [ ] **Step 1：失败测试。** 随机 Temp 目录仅复制干净的 `skills/` 源码（排除任何已装 `.runtime`/旧 `.venv`/旧 `node_modules`）。隔离子进程去除源仓库 `PYTHONPATH/NODE_PATH`，首次 `check` 报缺项；检查真实路径不指向原仓库或全局 `figure_layout`。
+- [ ] **Step 2：实际安装。** 在 Temp 复制的 `figure-infrastructure/` 中执行 `bootstrap install`；确认只在该 Skill 内创建 `.runtime/` 和 uv/npm 缓存。运行时不再引用原仓库的任何环境，且全局软件安装目录无写入。
+- [ ] **Step 3：Python 运行测试。** 单独复制 `py-infrastructure` 并执行原合同；figure 从复制 Skill 的 `.runtime/python/.venv` 解释器导入，导出 1004×709 PNG、2126×1241 SVG/PDF，审查状态与科学数据不变。
+- [ ] **Step 4：JS 运行测试。** 使用复制 Skill 内 `.runtime/javascript/node_modules/plotly.js-dist-min/plotly.min.js` 和五个 `scripts/javascript` 文件构造离线页面；现有独立浏览器导出单双栏 PNG/SVG，验证尺寸、审查结果和原 Plotly 状态。
+- [ ] **Step 5：删除/重装验收与提交。** 检查缺依赖、离线无依赖、安装失败、损坏锁文件、`not_auditable`。随后在 Temp 删除整个复制的 `figure-infrastructure` 并确认 `.runtime`、Python/Plotly 依赖及下载缓存一并消失；源 Skill、开发环境、其它 Skill 不受影响。新位置重新复制源码与 `install` 应恢复能力。提交 `test(skills): verify copied skills work independently`。
 - **回滚：**仅撤销新增测试；所有测试生成物位于 Temp，不修改用户文件。
 
 ## Task 6：清理旧本地环境、完成根项目文档与总复审
@@ -179,12 +180,12 @@
 - No Git deletion of running source.
 
 - [ ] **Step 1：环境保护检查。** 记录上述目录真实大小、文件状态、任务进程占用和用户文件；确认新的根开发环境和 Task 5 的 Temp 部署全部通过后才能清理。旧 `.venv` 不能直接当作可搬移的有效虚拟环境。
-- [ ] **Step 2：清理方案检查。** 确认旧 `.venv/node_modules/.pytest_cache` 实际位于主检出原路径，而新隔离任务工作树不持有这些被忽略目录。此阶段只检查、记录大小和路径，**不要提前搬动主检出的环境**。实际清理放到 Step 7，在快进合并后进行。
+- [ ] **Step 2：清理方案检查。** 核对主检出旧 `.venv/node_modules/.pytest_cache` 与新 `.runtime/` 的位置，确认 Temp 任务工作树不持有这些被忽略文件。只记录状态，实际旧环境清理在合并后的 Step 7；不得提前破坏原环境。
 - [ ] **Step 3：品牌与 README。** 根 README 和 `AGENTS.md` 当前项目名改为 `my-sci-skills`；强调仓库根只用于开发，`skills/` 可独立复制；同步 `CONTEXT.md` 中活跃路径与下一步，历史文件名引用按历史标签保留。
 - [ ] **Step 4：总回归。** 根 Python 和 JS 全套测试再次运行并记录具体 passed/failed/warnings/exit code；导出 Python/Plotly 单双栏代表样图并实际读取联系表与关键区域，验证未增加裁切、重叠和多余留白。
-- [ ] **Step 5：发布形态门槛。** 计算 `skills/` 在分发态的实际文件总量 ≤2 MiB；仅有上文列出的分发资产；检查 `git ls-files skills` 没有测试、敏感文件和用户绝对路径。查看完整变更、第三方许可证、`git diff --check`，独立 reviewer 复核。
+- [ ] **Step 5：分发体积门槛。** 在 Temp 只复制未安装依赖的 `skills/`，总大小 ≤2 MiB；源码/锁/许可证齐全。另检查安装后的 `.runtime/` 位于对应 Skill 内而非外部，体积不受 2 MiB 限制。审查所有差异、许可证、个人路径与 `git diff --check`，独立 reviewer 复核。
 - [ ] **Step 6：提交及合并。** 以 `docs(repo): describe standalone my-sci-skills distribution` 提交文档和开发目录变更；在任务分支完成全套验收后，于原仓库主检出快进合并到 `main`，核对源码及 Git 干净，再删除任务分支。
-- [ ] **Step 7：清理原主检出的本机环境。** 在合并后的原仓库根创建/校验 `.venv` 与 `node_modules`，从根实际运行 Python、JS 小范围测试成功后，再把主检出 `skills/figure-infrastructure/` 下的旧 `.venv`、`node_modules`、`.pytest_cache` 安全移动至 Temp 备份。复查 `skills/` 物理目录 ≤2 MiB 且不存在环境目录。移动失败保持原文件，标记验收未完成，禁止删除或强制覆盖。
+- [ ] **Step 7：清理旧安装形态。** 合并后先验证根目录开发 `.venv/node_modules` 和 Temp Skill 内 `.runtime/` 都可用；再将主检出 `skills/figure-infrastructure/` 下旧 `.venv`、`node_modules`、`.pytest_cache` 移至 Temp 备份。主仓库 `skills/` 处于**尚未安装 .runtime 的干净源码态**，物理大小 ≤2 MiB。移动失败则保留旧目录并标记未完成，禁止强删。
 - **回滚：**Git 以每任务提交回退；旧缓存的临时备份在回滚验证前保留，不强制清空。
 
 ## Task 7：本地 Git 仓库目录更名（仅 Task 6 通过后）
@@ -203,9 +204,9 @@
 ## 完成验收表
 
 - [ ] 两个 Skill 只复制 `skills/` 即拥有全部本地代码、文档和安装能力；`py-infrastructure` 无第三方依赖。
-- [ ] `figure-infrastructure` 的安装、检查、缓存清理和离线使用行为按设计可复现。
-- [ ] 所有测试及视觉脚本在根目录，`skills/` 内无测试或任何 200+ MiB 环境。
-- [ ] `skills/` 实测分发体积 ≤2 MiB；依赖二进制只在外部缓存。
+- [ ] `figure-infrastructure` 的 `check/install` 只处理自身 `.runtime/`，首次安装、复用、删除及新位置重建均可复现。
+- [ ] 所有测试及视觉脚本在根目录；干净 `skills/` 中无 `tests/`、旧 `.venv/` 或 `node_modules/`。
+- [ ] **未安装依赖的分发副本** ≤2 MiB；安装后 `.runtime/` 可超过 200 MiB，运行依赖和 uv/npm 专属缓存位于对应 Skill 内。
 - [ ] 保留现有运行 API、图形画布尺寸与 `native_only` 状态；新增分发测试全部通过。
 - [ ] 根 Python/JS 全量测试、独立复制测试、实际视觉检查与安全/许可差异审查通过。
 - [ ] 本地根目录统一为 `my-sci-skills`，Git `main` 干净，原提交完整。

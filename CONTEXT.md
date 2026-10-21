@@ -23,6 +23,7 @@
 - Nature PDF FlateDecode 解压大小限制和文本比较复杂度仍是公开发布前处置项。
 - 当前主仓库没有配置 Git remote，GitHub 目标名称已定为 `inoceanlee/my-sci-skills`；用户要求先完成 Skills 独立分发设计与实施验收，再发布。
 - 2026-10-21：新设计 `docs/superpowers/specs/2026-10-21-my-sci-skills-distribution-design.md` 与计划 `docs/superpowers/plans/2026-10-21-my-sci-skills-distribution.md` 已写入，待用户审阅；代码、仓库根目录和远端尚未变更。
+- 2026-10-21：用户已批准便携式环境布局：`figure-infrastructure/.runtime/` 保存本 Skill 的 Python/Node 依赖及其专属下载缓存，删除 Skill 时一起删除；用户区设计和计划已据此修订，仍待实施批准。
 - Task 10 和 Task 11 尚未开始。
 
 ## 下一步

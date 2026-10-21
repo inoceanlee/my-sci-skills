@@ -194,8 +194,8 @@
 - Local directory rename `dev-via-agents/sci-infrastructure` → `dev-via-agents/my-sci-skills`
 - No source rename or public API change.
 
-- [ ] **Step 1：前置检查。** `main` 干净；`git worktree list` 只剩主检出。对本会话遗留 `refactor/skill-runtime-boundary`，先核对无改动，再用 `git worktree remove` 和 `git branch -d` 处理。其它未知工作树不擅自删除。
-- [ ] **Step 2：占用和目标检测。** 停止本任务持有旧目录的终端、检查父目录是否已有 `my-sci-skills`。如果目标已存在、文件锁定或未知工作树存在，明确阻塞，保持原路径，不强制执行。
+- [x] **Step 1：前置检查。** `main` 干净；`git worktree list` 只剩主检出。对本会话遗留 `refactor/skill-runtime-boundary`，先核对无改动，再用 `git worktree remove` 和 `git branch -d` 处理。其它未知工作树不擅自删除。
+- [x] **Step 2：占用和目标检测。** 已确认目标先前空闲，RTK 与 PowerShell 子进程在系统 Temp 执行；无终端、脚本或进程命令行引用旧路径。`Rename-Item` 报告目录占用，当前工具无法识别目录句柄持有者，故更名保持阻塞并保留旧路径。
 - [ ] **Step 3：更名。** Windows `Rename-Item` 在同一父目录将旧目录重命名，不复制 Git 历史。别名、工作区、快捷方式仅报告影响，不擅自改外部个人设置。
 - [ ] **Step 4：最终核对。** 在新目录执行 `git status --short --branch`、`git log -1 --oneline`、`git worktree list`；核对所有脚本通过相对路径工作。若路径导致验证失败，优先恢复旧目录而不是再建第二个仓库。
 - [ ] **Step 5：汇报。** 明确新根路径、SHA、完整测试、分发目录体积和 Git remote 状态；本阶段不执行 GitHub 创建或推送。

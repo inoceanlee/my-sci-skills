@@ -7,7 +7,6 @@
 ## 当前状态
 
 - 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`。
-- 当前主提交为 `60b3293`。
 - 分发主提交为 `92d5841`。
 - 后续提交 `60b3293` 增加 `.gitattributes` 规则 `LICENSE -text`。该规则固定 Windows 与 Unix 检出的许可证字节。
 - 三份 MIT 许可证均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
@@ -29,14 +28,14 @@
 - Windows 的 `core.autocrlf=true` 已由 `.gitattributes` 规则处理。
 - 三份许可证字节一致。
 - 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
-- 主仓库目录仍为 `sci-infrastructure`。
-- Task 7 更名和更名后的验证尚未完成。
+- 主仓库目录仍为 `sci-infrastructure`；Task 7 更名与新路径验证暂缓。
+- 已确认 RTK 和 PowerShell 子进程在系统 Temp 执行；没有终端、脚本或命令行引用旧仓库路径的进程。`Rename-Item` 仍报告目录占用，现有工具无法识别句柄持有者；当前主工作区仍登记在旧路径。后续在不持有旧路径的独立工作区确认占用来源后，再决定是否更名。
 - 当前没有配置 Git remote。本地更名不包含创建公开仓库或推送。
 
 ## 下一步
 
-1. 完成 Task 7：确认只剩主工作树、目标目录空闲、无活动终端，再将本地目录更名为 `my-sci-skills`。
-2. 在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`。随后同步上下文，检查文档引用，再删除已完成的设计稿和计划稿。
+1. 在不持有旧路径的独立工作区确认目录占用来源和目标状态。释放已确认的占用后，再完成 Task 7 更名；占用仍未知时保留旧路径。
+2. 更名后在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`，同步上下文并检查文档引用，再删除已完成的设计稿和计划稿。
 3. 后续独立验收负责公开仓库创建、完整历史安全审查和推送。当前没有 Git remote。
 
 ## 用户约束
@@ -133,7 +132,7 @@
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- 本地仓库目录更名和更名后路径验证尚未完成。
+- 本地仓库更名仍受未识别的目录占用阻塞。执行 shell 已确认位于系统 Temp；当前主工作区仍登记于旧路径。按计划保留现路径，待能在不持有旧路径的环境中确认句柄来源后继续。
 
 ## 验证入口
 

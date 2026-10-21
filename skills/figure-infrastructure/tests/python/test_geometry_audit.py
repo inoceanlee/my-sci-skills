@@ -506,3 +506,25 @@ def test_markevery_one_is_fully_auditable():
     assert result.status == "passed"
     assert result.collision_count == 0
     plt.close(fig)
+
+
+def test_excess_text_elements_stop_pairwise_audit_at_bound(monkeypatch):
+    import figure_layout.audit as audit_module
+
+    monkeypatch.setattr(
+        audit_module, "_MAX_AUDITED_TEXT_ELEMENTS", 8, raising=False
+    )
+    fig, ax = plt.subplots()
+    ax.set_axis_off()
+    for index in range(10):
+        ax.text(.5, .5, f"label {index}")
+
+    result = GeometryAuditor().audit(fig, ax)
+
+    assert result.status == "not_auditable"
+    assert result.collision_count is None
+    assert sum(issue.code == "GEOMETRY_COLLISION" for issue in result.issues) <= 28
+    assert any(issue.code == "GEOMETRY_NOT_AUDITABLE" and
+               issue.element_ids == ("text_elements:limit",)
+               for issue in result.issues)
+    plt.close(fig)

@@ -8,31 +8,31 @@
 
 ## 当前状态
 
-- 2026-10-21：Task 1–5 已提交至 `figure-geometry-qa` 分支；Task 6 的实现、测试和文档仍未提交。
-- 任务工作树位于系统 Temp 的 `sci-infrastructure-worktrees/figure-geometry-qa`；主工作树 `main` 未改动。
-- 任务分支 HEAD 为 `9168ab98f529456bc7c7315ab58216a1f50a8c31`；12 个跟踪文件有未提交改动。
-- 最新 Python 全套回归：268 passed，145 条依赖弃用警告。
+- 2026-10-21：Task 1–5 已提交；Task 6 初次验收提交为 `92fa37e`，当前任务分支另有 Python 文本审查上限修复待提交。
+- 任务工作树位于系统 Temp 的 `sci-infrastructure-worktrees/figure-geometry-qa`；主工作树 `main` 保持干净。
+- 当前任务分支基线为 `2e16c6b461d048aac61d01b10d648e23ca9396da`，HEAD 为 `92fa37ea4da926a42af115dee2dcad7494644b9e`；4 个跟踪文件待提交，其中 2 个包含安全修复。
+- 最新 Python 全套回归：269 passed，145 条依赖弃用警告。
 - 警告包括 123 条 Python `itertools` pickle/deepcopy 弃用警告和 22 条 Seaborn `vert` 弃用警告。
 - 最新 JavaScript 全套回归：63/63 passed。
-- 最新 Python 几何定向测试：32 passed；Nature PDF 定向测试：11 passed。
+- 最新 Python 几何定向测试：33 passed；Nature PDF 定向测试：11 passed。
 - Python 视觉图库生成 64 张 PNG，0 张拒绝导出；12 张通过完整几何审查，52 张诚实标为 `not_auditable`，报告状态为 `incomplete`。
 - Agent 实际读取 Python 单/双栏 `preserve/compact` 四张联系表，以及折线、误差带、饼图和圆环图代表图片；未见明显遮挡或裁切。
 - Plotly 图族测试生成 40 张单/双栏 PNG 和 20 张 SVG；Agent 实际读取全部 40 张 PNG。
 - Plotly 测试验证 20 张 SVG 的根节点、`viewBox`、物理尺寸、关键文字、裁切状态和几何审查角色。
 - 最终复审确认两项漏报并已修复：可见 `layout.shapes` 现在返回 `not_auditable`；Nature PDF 文本审计存在警告时返回 `not_auditable`。
-- 阶梯线漏报未能复现。项目 Python 环境输出确认 `Line2D.get_path()` 已包含 `steps-pre`、`steps-mid`、`steps-post` 的展开顶点。新增三种样式的遮挡回归均通过。
-- 最终独立复审确认无其他问题；阶梯线问题已撤回。
-- 安全扫描器的 `ref_diff` 扫描完整审查了旧 HEAD 的 18 个已提交变更路径，未报告发现。
-- 安全扫描器把工作树扫描根目录解析为主工作树，未扫描任务分支 12 个未提交路径；不能把扫描结果当作最终分支覆盖证据。
-- PDF FlateDecode 解压没有输出大小上限，仍是公开发布前阻塞项。PDF 文本碰撞审查仍有平方复杂度，需在公开发布前评估。
-- 调用方选择 Nature 审计脚本目录的高危入口已移除，但需由最终分支扫描确认。
+- 阶梯线漏报未能复现。`Line2D.get_path()` 已包含三种阶梯样式的展开顶点；三种样式的遮挡回归均通过。
+- 独立代码复审确认无其他问题；完整安全扫描覆盖基线到 `92fa37e` 的 22 个变更路径。
+- 完整扫描报告一项中危 `SCI-GEOMETRY-AUDIT-QUADRATIC`：大量可见文本导致平方级比较和问题记录。已加入最多审查 128 个可见非空文本的上限与回归；针对测试先失败后通过，最终全 Python 回归通过。此修复尚待提交和重新扫描。
+- 扫描将未修改的 Nature PDF 解压实现标为既有风险并延期：FlateDecode 解压缺少输出大小上限，公开发布前必须处理。
+- 既有 Nature PDF 文本碰撞比较仍有平方复杂度；另行评估输入规模及处理方案。
+- 调用方选择 Nature 审计脚本目录的高危入口已移除，并由完整扫描审查。
 - 原始 ADC 数据和 `radar-research` 项目没有在本任务工作树中改动。
 
 ## 下一步
 
-1. 完成 `CONTEXT.md`、Task 6 计划、最终差异和 `git diff --check` 的复核。
-2. 在任务分支提交 Task 6，再以 `main` 基线到最终 HEAD 的差异运行完整安全扫描。
-3. 扫描与审查通过后快进合入 `main`，验证提交，再清理任务分支和 Temp 产物。
+1. 完成 Python 文本审计资源上限的提交和差异复审。
+2. 对最新任务分支重新运行完整安全扫描，确认覆盖全部变更且中危 finding 已关闭。
+3. 记录扫描与提交结果后快进合入 `main`；验证合并，再删除任务分支和 Temp 工作树。
 
 ## 用户约束
 
@@ -109,11 +109,11 @@
 
 ## 集成门槛
 
-- 安全扫描范围必须证明覆盖完整任务分支差异；扫描旧 HEAD 的 18 个已提交路径不能覆盖新改的 12 个路径。
-- 完整代码复审必须覆盖 Task 1–6 的分支差异；当前最终复审无未解决代码问题。
-- 最终代码通过 `git diff --check` 后，使用明确的 Conventional Commit 提交 Task 6。
-- 提交后扫描 `main` 基线到最终任务 HEAD 的完整差异，并确认高危问题已解决。
-- PDF FlateDecode 无上限解压是公开发布前阻塞项；平方复杂度风险须记录评估决定。
+- 安全扫描必须覆盖完整任务分支差异；最新完整扫描覆盖 22 个变更路径，并发现一项中危文本碰撞复杂度问题，修复后必须重新扫描。
+- 完整代码复审必须覆盖 Task 1–6 的分支差异；最新复审无未解决问题，新的资源上限补丁需复审。
+- 最终代码通过 `git diff --check` 后，使用 Conventional Commit 提交 Task 6 修复。
+- 提交后以 `main` 基线到最新任务 HEAD 的完整差异扫描，确认新增中危问题关闭。
+- PDF FlateDecode 无上限解压是公开发布前阻塞项；Nature PDF 文本解析复杂度风险需记录评估决定。
 - 只允许快进合并已验证提交；不重写用户现有主分支历史。
 - 合并成功后删除任务分支与其 Temp 工作树。
 - 本次工作不配置 Git remote；公开远程和标签留给 Task 11。
@@ -135,9 +135,9 @@
 
 ## 活跃问题
 
-- 12 个任务分支未提交路径尚无可验证安全扫描覆盖；先提交任务分支，再扫描最终 `base..HEAD` 差异。
+- Python 几何审计已限制最多处理 128 个可见非空文本元素；最终分支扫描尚待确认此修复关闭中危 finding。
 - PDF FlateDecode 解压无输出大小限制；在公开发布前增加安全限制。
-- PDF 文本碰撞比较存在平方复杂度；公开发布前评估输入规模和处理方案。
+- Nature PDF 文本碰撞比较存在平方复杂度；公开发布前评估输入规模和处理方案。
 - Task 10 和 Task 11 尚未开始。
 
 ## 文件入口

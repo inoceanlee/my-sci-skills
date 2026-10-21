@@ -9,6 +9,8 @@ from matplotlib.transforms import Bbox
 from .layout import LayoutMetrics, ProtectedArea
 from .nature import NatureAudit
 
+_MAX_AUDITED_TEXT_ELEMENTS = 128
+
 
 @dataclass(frozen=True)
 class GeometryIssue:
@@ -66,6 +68,8 @@ class GeometryAuditor:
         issues: list[GeometryIssue] = []
         roles: set[str] = set()
         unauditable = []
+        text_elements_seen = 0
+        text_limit_reached = False
         clipping_count = 0
 
         factor = 72 / fig.dpi
@@ -115,9 +119,17 @@ class GeometryAuditor:
                 ))
 
         def add_text(element_id, role, text):
-            if text.get_visible() and text.get_text():
-                add(text.get_gid() or element_id, role, text,
-                    text.get_window_extent(renderer))
+            nonlocal text_elements_seen, text_limit_reached
+            if not text.get_visible() or not text.get_text():
+                return
+            if text_elements_seen >= _MAX_AUDITED_TEXT_ELEMENTS:
+                if not text_limit_reached:
+                    unauditable.append("text_elements:limit")
+                    text_limit_reached = True
+                return
+            text_elements_seen += 1
+            add(text.get_gid() or element_id, role, text,
+                text.get_window_extent(renderer))
 
         add_text("axis:x_title", "axis_title", ax.xaxis.label)
         add_text("axis:y_title", "axis_title", ax.yaxis.label)

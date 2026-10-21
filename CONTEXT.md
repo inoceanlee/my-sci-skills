@@ -8,13 +8,13 @@
 
 ## 当前状态
 
-- 2026-10-21：Task 1–5 已完成。Task 6 资源上限与回归修复已实现，任务分支尚未合并。
-- 任务工作树位于系统 Temp：`sci-infrastructure-worktrees/figure-geometry-qa`。
-- 主工作树位于项目 `main`，当前仍在任务基线，工作区干净。
-- 任务分支基于 `2e16c6b461d048aac61d01b10d648e23ca9396da`；最近已提交验收记录为 `d93ad30`。
-- 最新 Python 全套回归 `270 passed`，含 145 条依赖弃用警告；JavaScript 全套 `68 passed`。
+- 2026-10-21：Task 1–6 已完成并本地合入 `main`；最终实现提交为 `162c003`。
+- 任务工作树曾位于系统 Temp，Git 工作树注册和已合并分支均已清理。
+- 主工作树 `main` 包含 Task 6 全部实现和收尾提交，当前干净。
+- 任务分支基于 `2e16c6b461d048aac61d01b10d648e23ca9396da`；合并提交链含 `86acae4`、`d93ad30`、`162c003`。
+- 最终 Python 全套 `270 passed`，JavaScript 全套 `68 passed`；Python 含 145 条依赖弃用警告。
 - Python 警告包括 123 条 `itertools` deepcopy 弃用和 22 条 Seaborn `vert` 弃用。
-- 独立完整差异复审无发现。最终完整扫描 `secscan_01a15c3eb35a762db85776bd45a710c3` 覆盖 23 个变更路径、无排除；发现的中危 Trace 复杂度问题已按 TDD 修复，待最终复扫。
+- 独立复审无发现。最终安全扫描 `secscan_01a15c53a7a07561a2ecc28995bd511e` 覆盖完整 23 个变更路径、无排除、零发现。
 - Task 6 视觉验收生成 Python 64 张 PNG、Plotly 40 张 PNG 和 20 张 SVG；Agent 实际读取全部 Plotly PNG、Python 联系表和代表图。
 - Python 图库有 12 张完整审查通过、52 张诚实标记 `not_auditable`，报告状态为 `incomplete`。
 - Python 在几何审计前检查最多 100,000 个可见路径顶点；排版优化器可能先绘制，故上限不限制优化器阶段开销。此限制已接受并记录为非阻塞事项。
@@ -26,9 +26,7 @@
 
 ## 下一步
 
-- 本地快进合入 `main` 并验证提交完整。
-- 获取 K 仓库的准确远程地址后，推送 `main`。
-- 合并后清理任务分支与系统 Temp 工作树。
+- 获取 K 仓库的准确 Git 地址后，将本地 `main` 推送到该仓库。
 
 ## 用户约束
 
@@ -92,8 +90,8 @@
 - 依赖版本通过项目锁文件管理，不为本任务安装全局包。
 - `py-infrastructure` 的公开 API 与迁入源文件维持原合同。
 - 科研 Skill 版本以 Git 标签锁定，避免多端安装时分叉。
-- 最终安全扫描必须覆盖任务分支相对基线的完整差异。最近扫描发现的中危 Trace 复杂度问题已修复，最终复扫仍待完成。
-- 任务分支通过完整复审与最终安全扫描后可快进合并。远程未配置时不得猜测推送目标。
+- 最终安全扫描覆盖基线至 `162c003` 的完整差异，23 个变更路径、无排除、零发现。
+- 本地变更已合入 `main`；Git remote 和 K 仓库地址均未配置，不能猜测推送目标。
 - Nature PDF 解压大小限制和文本比较复杂度属于公开发布前处置门槛。
 
 ## 可复用踩坑
@@ -141,7 +139,7 @@
 
 ## 活跃问题
 
-- Python 排版优化可能先于路径顶点审计执行绘制；目前作为非阻塞限制记录。Trace 资源修复通过完整 Python/JS 回归，最终安全复扫待完成。
+- Python 顶点上限不保护排版优化器的前置绘制，此限制已接受为非阻塞项。Plotly Trace 复杂度风险已修复，并通过最终完整差异扫描。
 - PDF FlateDecode 解压无输出大小限制，公开发布前增加安全限制。
 - Nature PDF 文本碰撞比较存在平方复杂度，公开发布前评估输入规模和处理方案。
 - Task 10 和 Task 11 尚未开始。
@@ -149,7 +147,7 @@
 ## 文件入口
 
 - `AGENTS.md`：本仓库实施、隔离环境、测试和发布要求。
-- Task 6 批准的设计与计划保存在 Git 历史中；本地完成后按仓库规则清理对应文档。
+- Task 6 批准的设计和计划已保存在 Git 历史；完成后依仓库规则清理了工作副本。
 - `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：Task 10/11 范围和发布门槛。
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：基础架构与固定合同。
 - `skills/figure-infrastructure/references/capability-matrix.md`：图族支持级别与审查边界。

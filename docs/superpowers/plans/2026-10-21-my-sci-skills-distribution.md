@@ -53,7 +53,7 @@
 10. 当前 Windows 实机视觉验证必须实际读取导出图片。Linux 上的复测由后续 CI 阶段完成，不能提前宣称通过。
 11. 实施期间创建隔离任务工作树时必须放 Temp。原有 `refactor/skill-runtime-boundary` 空工作树不得覆盖；确认无用户修改后再注销。
 12. 保留第三方 Nature 脚本的 SHA、来源记录、Apache-2.0 许可。已知 PDF 解压/复杂度风险属于公开发布前必须处理的独立风险，不在本轮偷偷修改上游。
-13. 本轮 GitHub `inoceanlee/my-sci-skills` 尚未建立，禁止提前 `gh repo create`、`git push` 或配置猜测的 `remote`。
+13. 设计定稿时 GitHub `inoceanlee/my-sci-skills` 尚未建立，因此当时禁止新建、推送或配置猜测的 `remote`。用户随后明确授权同步到 K 的既有仓库；该授权不包含创建新仓库或覆盖远端独有提交。
 14. 完成后按 `project-context` 更新整个 `CONTEXT.md`，过时完成稿由 Git 历史保留；仅删除确实完成且无活跃引用的计划/设计。
 
 ### Skills 与职责
@@ -198,7 +198,7 @@
 - [x] **Step 2：占用和目标检测。** 当前父目录未列出目标 `my-sci-skills`；RTK 与 PowerShell 子进程在系统 Temp 执行，无终端、脚本或进程命令行引用旧路径。`handle.exe` 与 Scoop `sysinternals` 不可用；`openfiles /query` 要求系统全局跟踪且返回拒绝访问。`Rename-Item` 报告目录占用，句柄持有者未知；更名保持阻塞并保留旧路径。
 - [ ] **Step 3：更名。** Windows `Rename-Item` 在同一父目录将旧目录重命名，不复制 Git 历史。别名、工作区、快捷方式仅报告影响，不擅自改外部个人设置。
 - [ ] **Step 4：最终核对。** 在新目录执行 `git status --short --branch`、`git log -1 --oneline`、`git worktree list`；核对所有脚本通过相对路径工作。若路径导致验证失败，优先恢复旧目录而不是再建第二个仓库。
-- [ ] **Step 5：汇报。** 明确新根路径、SHA、完整测试、分发目录体积和 Git remote 状态；本阶段不执行 GitHub 创建或推送。
+- [ ] **Step 5：汇报。** 明确新根路径、SHA、完整测试、分发目录体积和 Git remote 状态。按用户后续授权，仅在 K 的既有仓库可达且远端历史可快进时同步；不创建新仓库或覆盖远端独有提交。当前设计目标返回 `Repository not found`，同步尚未完成。
 - **回滚：**仅在确认旧目标空闲且不会覆盖任何文件后，将目录安全改回原名；不重写 `main` Git 历史。
 
 ## 完成验收表

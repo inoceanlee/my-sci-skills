@@ -29,12 +29,12 @@
 - 三份许可证字节一致。
 - 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
 - 主仓库目录仍为 `sci-infrastructure`；Task 7 更名与新路径验证暂缓。
-- 已确认 RTK 和 PowerShell 子进程在系统 Temp 执行；没有终端、脚本或命令行引用旧仓库路径的进程。父目录当前未列出目标 `my-sci-skills`。`handle.exe` 不可用，Scoop 未安装 `sysinternals`；`openfiles /query` 要求系统全局跟踪且返回拒绝访问。`Rename-Item` 仍报告目录占用，句柄持有者未知；当前主工作区仍登记在旧路径。
+- RTK 与 PowerShell 子进程在系统 Temp 执行；没有受管终端、脚本或命令行引用旧路径的进程。父目录当前未列出目标 `my-sci-skills`。`handle64.exe -a` 发现 `Paseo.exe`、`omp.exe`、`cmd.exe`、`node.exe`、`marksman.exe`、`ruff.exe` 持有旧目录句柄；未关闭任何句柄。当前主工作区仍登记在旧路径，更名须等这些进程释放句柄后再进行。
 - 本地没有配置 Git remote。对设计稿目标 `https://github.com/inoceanlee/my-sci-skills.git` 的只读查询返回 `Repository not found`；远端不存在、URL 已变更或私有仓库当前不可读，仍无法区分。
 
 ## 下一步
 
-1. 在不持有旧路径的独立工作区继续确认目录句柄来源；目标目录当前未列出。只有确认并释放占用、且目标仍空闲时才完成 Task 7 更名；否则保留旧路径。
+1. 等已识别的工作区和工具进程释放旧目录句柄；从不持有旧路径的工作区再次用 Handle 确认无句柄、目标仍空闲后，再完成 Task 7 更名。
 2. 更名后在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`，同步上下文并检查文档引用，再删除已完成的设计稿和计划稿。
 3. 用户已授权同步到 K 的既有仓库；设计稿目标返回 `Repository not found`，本地无 remote。取得可访问的既有目标后，先核对历史再按授权同步；不创建新仓库、不覆盖远端独有提交。
 
@@ -132,7 +132,7 @@
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- 本地仓库更名仍受未识别的目录占用阻塞。执行 shell 已确认位于系统 Temp；当前主工作区仍登记于旧路径。按计划保留现路径，待能在不持有旧路径的环境中确认句柄来源后继续。
+- 本地仓库更名受已识别的目录句柄阻塞。Handle 报告多个 Paseo、OMP、shell、Node 和语言服务进程仍持有旧路径；不关闭进程或句柄，待进程自然释放后再从独立工作区验证并继续。
 
 ## 验证入口
 

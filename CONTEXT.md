@@ -8,35 +8,27 @@
 
 - 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`。
 - 分发主提交为 `92d5841`。
-- 上一阶段主分支基线为 `60b3293`；该提交添加 `.gitattributes` 规则 `LICENSE -text`，固定 Windows 与 Unix 检出的许可证字节。
-- 三份 MIT 许可证均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
-- 主分支 Python 全量回归：283 passed、1 skipped、8 subtests passed、145 warnings，用时 322.26 秒。
-- 主分支 JavaScript 全量回归：70 passed、0 failed，用时 18.09 秒。
-- 许可证专项回归：1 passed、2 subtests passed。独立复制安装、运行、删除和重装回归：1 passed，用时 96.40 秒。
-- 以上全量回归在移动旧 Skill 环境前通过。
-- 移动后，根 Python 环境仍可导入 `figure_layout`。目录更名后运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`。
-- 根 `.venv` 和 `node_modules` 使用项目锁文件管理，并保留在仓库根目录。
-- 本次未修改全局软件环境。
-- 旧 Skill `.venv`、`node_modules`、`.pytest_cache`、残留测试目录和 Python 缓存已移至系统 Temp 的 `sci-infrastructure-legacy-skill-env-backup/`，用于回滚。
-- 该备份合计 240,725,748 字节。
-- 清理时也移动了 Git 忽略规则匹配的旧 `tests/` 和 `__pycache__/`。检查确认它们只含 `.pyc`，内容仍在同一 Temp 备份中。
-- 当前 `skills/` 源码树为 357,450 字节。扫描确认没有 `.runtime`、`.venv`、`node_modules`、`.pytest_cache`、`__pycache__` 或 `tests/`。
-- 独立复制测试报告 9 passed、1 skipped、4 subtests passed。实际安装后的 Temp 副本可运行 Python 与 JavaScript，并可删除后重装。
+- `60b3293` 添加 `.gitattributes` 规则 `LICENSE -text`，固定 Windows 与 Unix 检出的许可证字节。
+- 项目目录已更名为 `my-sci-skills`。Git 历史保留在原仓库中。
+- 更名后在新路径运行 `npm test`：70 passed、0 failed。
+- 更名后运行 `tests/py-infrastructure/test_contract.py`：1 passed。
+- 更名后的许可证一致性回归：1 passed、2 subtests passed。
+- 三份 MIT 许可证署名已更新为 `my-sci-skills contributors`。三份文件均为 1,083 字节，SHA-256 为 `0820ef78f70df313d665f6a0f5ee04a1e054c621a1a6d0229a9b1c8127d3e372`。
+- 旧路径下的 Python 全量回归为 283 passed、1 skipped、8 subtests passed、145 warnings，用时 322.26 秒。
+- 旧路径下的 JavaScript 全量回归为 70 passed、0 failed，用时 18.09 秒。
+- 独立复制测试为 9 passed、1 skipped、4 subtests passed。复制后的 Skill 可安装、运行、删除并重装。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应能力矩阵中的 `native_only` 类型。
-- 已实际读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。
-- 视觉检查未发现明显裁切或重叠。该结果不代表 52 项自动几何审查通过。
-- Windows 的 `core.autocrlf=true` 已由 `.gitattributes` 规则处理。
-- 三份许可证字节一致。
-- 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
-- 主仓库目录仍为 `sci-infrastructure`；Task 7 更名与新路径验证暂缓。
-- RTK 与 PowerShell 子进程在系统 Temp 执行；没有受管终端、脚本或命令行引用旧路径的进程。父目录当前未列出目标 `my-sci-skills`。`handle64.exe -a` 发现 `Paseo.exe`、`omp.exe`、`cmd.exe`、`node.exe`、`marksman.exe`、`ruff.exe` 持有旧目录句柄；未关闭任何句柄。当前主工作区仍登记在旧路径，更名须等这些进程释放句柄后再进行。
-- 本地没有配置 Git remote。对设计稿目标 `https://github.com/inoceanlee/my-sci-skills.git` 的只读查询返回 `Repository not found`；远端不存在、URL 已变更或私有仓库当前不可读，仍无法区分。
+- 已读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠；这不代表 52 项自动审查通过。
+- 本地没有配置 Git remote。
+- GitHub 工具无法解析 `inoceanlee/my-sci-skills` 或旧目标 `inoceanlee/sci-infrastructure`。无法区分仓库不存在、私有或当前账户无权访问。
+- 没有创建仓库，也没有推送。用户已授权同步到 K 的既有仓库，但尚未确认可访问的目标和远端历史。
+- Task 7 的本地更名和新路径测试已完成。同步到既有远端仍待目标可访问。
 
 ## 下一步
 
-1. 等已识别的工作区和工具进程释放旧目录句柄；从不持有旧路径的工作区再次用 Handle 确认无句柄、目标仍空闲后，再完成 Task 7 更名。
-2. 更名后在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`，同步上下文并检查文档引用，再删除已完成的设计稿和计划稿。
-3. 用户已授权同步到 K 的既有仓库；设计稿目标返回 `Repository not found`，本地无 remote。取得可访问的既有目标后，先核对历史再按授权同步；不创建新仓库、不覆盖远端独有提交。
+1. 取得可访问的既有仓库 owner/repo 和分支信息。
+2. 检查远端提交历史。仅在更新可快进且不覆盖远端独有提交时同步。
+3. 远端不可访问时保留本地结果，不创建新仓库，并说明缺少的目标信息。
 
 ## 用户约束
 
@@ -49,7 +41,7 @@
 - 视觉检查必须读取实际导出图片。不得只凭测试声称排版通过。
 - 无法审查的图形必须标记 `not_auditable`，不能报告为零冲突或通过。
 - 不为通过审查而篡改固定物理范围、固定色标、真实数据或必需标签。
-- 用户已授权合并到 `main` 并同步到 K 的仓库；本地尚无 Git remote，实际同步待核验目标仓库及历史状态。
+- 合并到 `main` 和同步到既有仓库已获用户授权。不得创建新仓库或覆盖远端独有提交。
 
 ## 关键决策
 
@@ -64,7 +56,7 @@
 - 安装器不下载 Python，也不修改全局 Python、Node、npm 或包缓存。
 - `py-infrastructure` 只依赖 Python 标准库，无需虚拟环境。
 - 每个 Skill 都携带自己的 MIT 许可证副本，保证单独复制时保留许可文本。
-- `.gitattributes` 使用 `LICENSE -text`，确保 Windows 与 Unix 检出保留相同许可证字节。
+- 三份 MIT 许可证保持字节一致。`.gitattributes` 中的 `LICENSE -text` 固定检出字节。
 - Nature Figure 上游脚本保留 Apache-2.0 许可，不改成 MIT。
 - `playwright-core` 只用于仓库测试，不属于 Skill 运行依赖。
 - 干净的 `skills/` 目录目标小于或等于 2 MiB。安装后的 `.runtime/` 不计入该限制。
@@ -132,7 +124,7 @@
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- 本地仓库更名受已识别的目录句柄阻塞。Handle 报告多个 Paseo、OMP、shell、Node 和语言服务进程仍持有旧路径；不关闭进程或句柄，待进程自然释放后再从独立工作区验证并继续。
+- 同步目标当前不可访问。先取得 K 的既有仓库地址，再核验远端历史。
 
 ## 验证入口
 
@@ -151,9 +143,8 @@
 ## 文件入口
 
 - `AGENTS.md`：实施、隔离环境、测试和发布规则。
-- `docs/superpowers/specs/2026-10-21-my-sci-skills-distribution-design.md`：轻量分发与本地目录更名设计。
-- `docs/superpowers/plans/2026-10-21-my-sci-skills-distribution.md`：对应实施计划。
-- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：后续 CI 与公开发布门槛。
+- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：后续 CI 与公开发布门槛，目标仓库名已更新为 `my-sci-skills`。
+- `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：早期方案记录，保留原始项目名和目标。
 - `skills/figure-infrastructure/SKILL.md`：科研绘图 Skill 操作入口。
 - `skills/figure-infrastructure/references/deployment.md`：独立部署与调用说明。
 - `skills/figure-infrastructure/references/capability-matrix.md`：图族支持等级与审查边界。
@@ -168,4 +159,4 @@
 - `README.md`、`LICENSE`：项目用途、许可和开发入口。
 
 ---
-_最后检查：2026-10-21_
+_最后核对：2026-10-22_

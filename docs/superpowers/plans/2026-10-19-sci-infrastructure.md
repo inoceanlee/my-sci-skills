@@ -4,7 +4,7 @@
 >
 > **状态：** 2026-10-19 用户已批准实施。公有 GitHub 发布须通过最后的安全与 CI 审查。
 
-**Goal:** 在 `sci-infrastructure` 独立仓库内交付可安装、可跨设备同步的 `py-infrastructure` 和 `figure-infrastructure` Skills，使常用二维科研图具备可检验的单图排版、标注避让及单/双栏导出能力。
+**Goal:** 在 `my-sci-skills` 独立仓库内交付可安装、可跨设备同步的 `py-infrastructure` 和 `figure-infrastructure` Skills，使常用二维科研图具备可检验的单图排版、标注避让及单/双栏导出能力。
 
 **Architecture:** 每个 Skill 的源码仅存于自己的 `scripts/`；`figure-infrastructure` 分别提供 Python(Matplotlib/Seaborn) 与 JavaScript(Plotly.js) 适配器。共用尺寸、范围和质量契约；利用原生绘图库绘制数据。先在独立工程测试，再由其他项目按标签版本接入。
 
@@ -79,7 +79,7 @@
 ### 文件结构与固定公开接口
 
 ```text
-sci-infrastructure/
+my-sci-skills/
 ├── AGENTS.md
 ├── CONTEXT.md
 ├── README.md
@@ -300,7 +300,7 @@ const result = await exportScientificFigure(plotDiv, {
 ## Task 11：CI、公开前检查、GitHub 发布及收尾
 
 **Files:** `.github/workflows/checks.yml`、`README.md`、`CONTEXT.md`、设计稿和本计划。
-**Interfaces:** 所有测试通过后，在 `inoceanlee/sci-infrastructure` 发布与实际能力表一致的 `v0.1.0` 版本。
+**Interfaces:** 所有测试通过后，在 `inoceanlee/my-sci-skills` 发布与实际能力表一致的 `v0.1.0` 版本。
 
 - [ ] **Step 1: 红测。** CI 覆盖 Windows/Ubuntu 的 Python、Node、Skill 安装、Nature PDF QA 和安全扫描；首轮本地运行全量测试，记录失败。
 - [ ] **Step 2: 实现。** 配置项目隔离 Python `uv sync --locked`、Node `npm ci` 与现有浏览器驱动；固定 Nature 原脚本版本和许可文件；提交安全的 CI 工作流。

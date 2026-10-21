@@ -8,36 +8,28 @@
 
 ## 当前状态
 
-- 2026-10-21：Task 1–5 已提交。Task 6 初次验收和 Python 文本审查上限修复已提交。
-- Task 工作树位于系统 Temp：`sci-infrastructure-worktrees/figure-geometry-qa`。
-- 主工作树位于项目 `main`，此前保持干净。
-- 任务分支为 `figure-geometry-qa`。分支基线为 `2e16c6b461d048aac61d01b10d648e23ca9396da`。
-- 当前已提交 HEAD 为 `426576a94bfc3870504a8bd8b63714efa47346c1`。
-- 当前有 6 个已跟踪文件待提交：4 个源码/测试文件、`CONTEXT.md` 和本计划。
-- 最近一次完整 Python 回归为 270 passed，145 条依赖弃用警告。
-- 最近一次完整 JavaScript 回归为 65 passed，0 failed，发生在最后一轮复审修复之前。
-- 最后复审新增的 Plotly 定向回归为 36/36 通过。最终 Python/JS 全量回归已启动，结果待读取。
-- Python 弃用警告包括 123 条 `itertools` pickle/deepcopy 警告和 22 条 Seaborn `vert` 警告。
-- Task 6 视觉验收已生成 Python 64 张 PNG、Plotly 40 张 PNG 和 20 张 SVG。
-- Agent 实际查看全部 40 张 Plotly PNG，并查看 Python 联系表和代表图。
-- Python 图库中 12 张完整审查通过，52 张诚实标记为 `not_auditable`。报告状态为 `incomplete`。
-- 本轮只调整审计边界，没有更改绘图数据或渲染规则。尚未重新生成视觉图库。
-- 2026-10-21 完整扫描覆盖基线至 `426576a` 的 22 个路径，发现两个中危资源风险。
-- Python 风险涉及超大路径顶点转换、检查和导出候选复制。
-- Plotly 风险涉及可见 SVG 文本的无界收集、平方级碰撞比较和问题对象累积。
-- Python 回归现已验证超过 100,000 个可见路径顶点时，在 `canvas.draw()` 前返回 `not_auditable`。
-- Plotly 回归已验证最多处理 128 个可见非空文本，并最多保存 1,024 条文本碰撞记录。
-- Plotly 使用 `TreeWalker` 逐个读取文本，并检查祖先可见性；超限时返回 `not_auditable`。
-- 最后复审发现的两项 Plotly 文本问题已按 TDD 修复。完整回归、最终复审与安全复扫尚未完成。
-- Nature PDF `FlateDecode` 解压缺少输出大小上限。该未修改风险是公开发布前阻塞项。
-- Nature PDF 文本碰撞比较仍有平方复杂度，公开发布前需评估输入规模和处理方案。
+- 2026-10-21：Task 1–5 已完成。Task 6 资源上限与回归修复已提交为 `86acae4`。
+- 任务工作树位于系统 Temp：`sci-infrastructure-worktrees/figure-geometry-qa`。
+- 主工作树位于项目 `main`，当前仍在任务基线，工作区干净。
+- 任务分支 `figure-geometry-qa` 基于 `2e16c6b461d048aac61d01b10d648e23ca9396da`；当前 HEAD 为 `86acae485c89b11708f9cf873db2a5f2c3aee364`。
+- Python 全套回归 `270 passed`，含 145 条依赖弃用警告；JavaScript 全套 `66 passed`。
+- 最新定向回归：Python 几何审计 `34/34`，JavaScript 几何审计 `36/36`。
+- 独立完整差异复审无发现。最终安全扫描 `secscan_01a15c3946af756e818a61df97fdde38` 覆盖基线至 `86acae4` 的 22 个变更路径，覆盖完整、无排除、零发现。
+- Python 警告包括 123 条 `itertools` deepcopy 弃用和 22 条 Seaborn `vert` 弃用。
+- Task 6 视觉验收生成 Python 64 张 PNG、Plotly 40 张 PNG 和 20 张 SVG；Agent 实际读取全部 Plotly PNG、Python 联系表和代表图。
+- Python 图库有 12 张完整审查通过、52 张诚实标记 `not_auditable`，报告状态为 `incomplete`。
+- 最近修改只调整审计边界，没有更改绘图数据或渲染规则；因此没有重跑视觉图片审查。
+- Python 在几何审计前检查最多 100,000 个可见路径顶点；但排版优化器可能先绘制，此上限不限制优化器阶段开销。此限制已接受并记录为非阻塞事项。
+- Plotly 使用增量 `TreeWalker` 检查可见文本，最多收集 128 个可见非空文本、保存 1,024 条碰撞记录；超限返回 `not_auditable`。
+- Nature PDF FlateDecode 解压大小限制和文本比较复杂度仍是公开发布前处置项。
+- 当前主仓库没有配置 Git remote，项目元数据也未提供 K 仓库地址；远程推送需获得准确目标。
 - Task 10 和 Task 11 尚未开始。
 
 ## 下一步
 
-1. 提交 6 个已验证文件，并复查提交后的完整差异。
-2. 对最新任务分支完整差异运行安全扫描和代码复审，记录覆盖及未解决风险。
-3. 全部合并门槛通过后快进合入 `main`，验证提交并清理任务分支和 Temp 工作树。
+- 本地快进合入 `main` 并验证提交完整。
+- 获取 K 仓库的准确远程地址后，推送 `main`。
+- 合并后清理任务分支与系统 Temp 工作树。
 
 ## 用户约束
 
@@ -96,13 +88,13 @@
 
 ### 工作流与版本
 
-- Task 6 继承 2026-10-20 批准的几何验收设计，不重写设计稿或计划稿。
+- Task 6 按 2026-10-20 批准的几何验收设计完成；测试、复审、扫描及已接受限制记录在本上下文和 Git 历史中。
 - Task 6 能力声明以 `capability-matrix.md` 为准。支持等级按实际完整几何角色审查确定。
 - 依赖版本通过项目锁文件管理，不为本任务安装全局包。
 - `py-infrastructure` 的公开 API 与迁入源文件维持原合同。
 - 科研 Skill 版本以 Git 标签锁定，避免多端安装时分叉。
-- 安全扫描必须覆盖最终任务分支差异。旧 `main` 或部分覆盖扫描不能替代。
-- 当前任务分支在完整复审、安全扫描和差异检查结束前不得合并。
+- 最终安全扫描必须覆盖任务分支相对基线的完整差异；本轮 22 个变更路径完整覆盖且零发现。
+- 任务分支通过完整复审与安全扫描后可快进合并。远程未配置时不得猜测推送目标。
 - Nature PDF 解压大小限制和文本比较复杂度属于公开发布前处置门槛。
 
 ## 可复用踩坑
@@ -150,7 +142,7 @@
 
 ## 活跃问题
 
-- 最新资源上限修改待提交、复审和完整安全扫描。
+- Python 排版优化可能先于路径顶点审计执行绘制；目前作为非阻塞限制记录。
 - PDF FlateDecode 解压无输出大小限制，公开发布前增加安全限制。
 - Nature PDF 文本碰撞比较存在平方复杂度，公开发布前评估输入规模和处理方案。
 - Task 10 和 Task 11 尚未开始。
@@ -158,8 +150,7 @@
 ## 文件入口
 
 - `AGENTS.md`：本仓库实施、隔离环境、测试和发布要求。
-- `docs/superpowers/specs/2026-10-20-figure-geometry-qa-design.md`：Task 6 已批准设计。
-- `docs/superpowers/plans/2026-10-20-figure-geometry-qa.md`：Task 6 验收与状态。
+- Task 6 批准的设计与计划保存在 Git 历史中；本地完成后按仓库规则清理对应文档。
 - `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：Task 10/11 范围和发布门槛。
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：基础架构与固定合同。
 - `skills/figure-infrastructure/references/capability-matrix.md`：图族支持级别与审查边界。

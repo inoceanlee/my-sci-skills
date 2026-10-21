@@ -14,7 +14,7 @@
 - 更名后 Python 全量测试：283 passed、1 skipped、8 subtests passed、145 warnings，用时 254.81 秒。
 - 更名后运行 `tests/py-infrastructure/test_contract.py`：1 passed。
 - 更名后的许可证一致性回归：1 passed、2 subtests passed。
-- 三份 MIT 许可证署名已更新为 `my-sci-skills contributors`。三份文件均为 1,083 字节，SHA-256 为 `0820ef78f70df313d665f6a0f5ee04a1e054c621a1a6d0229a9b1c8127d3e372`。
+- 三份 MIT 许可证保持原署名。每份文件为 1,088 字节，SHA-256 为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
 - 独立复制测试为 9 passed、1 skipped、4 subtests passed。复制后的 Skill 可安装、运行、删除并重装。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应能力矩阵中的 `native_only` 类型。
 - 已读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠；这不代表 52 项自动审查通过。
@@ -142,7 +142,7 @@
 ## 文件入口
 
 - `AGENTS.md`：实施、隔离环境、测试和发布规则。
-- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：后续 CI 与公开发布门槛，目标仓库名已更新为 `my-sci-skills`。
+- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：后续 CI 与公开发布门槛，计划目标为 `inoceanlee/my-sci-skills`；远端状态尚未核实。
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：早期方案记录，保留原始项目名和目标。
 - `skills/figure-infrastructure/SKILL.md`：科研绘图 Skill 操作入口。
 - `skills/figure-infrastructure/references/deployment.md`：独立部署与调用说明。

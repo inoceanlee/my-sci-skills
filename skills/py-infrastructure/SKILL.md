@@ -8,6 +8,8 @@ description: Use when Python work needs standardized project paths, logging, exc
 处理项目输出、日志、异常、计时或内存时使用。
 
 ## 复制与调用
+- 支持 Windows、Linux 和 macOS。使用目标项目已配置且符合项目版本要求的 Python 解释器。
+- 本 skill 仅依赖 Python 标准库，不需安装第三方包，也不修改系统级 Python 环境。
 
 - 将本 skill 的 `scripts/infrastructure/` 整包复制到目标项目 `utils/infrastructure/`；缺少 `utils/` 时创建。保留目录结构。
 - 只按本页公开 API 使用。源码不读、不改；API 未覆盖需求时停止并确认，不从源码推断。

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,76 @@ BOOTSTRAP = SKILL_ROOT / "scripts" / "setup" / "bootstrap.py"
 
 
 class StandaloneSkillTests(unittest.TestCase):
+    def test_figure_skill_docs_are_complete_and_self_contained(self) -> None:
+        skill_document = SKILL_ROOT / "SKILL.md"
+        deployment_document = SKILL_ROOT / "references" / "deployment.md"
+        self.assertTrue(skill_document.is_file(), skill_document)
+        self.assertTrue(deployment_document.is_file(), deployment_document)
+
+        skill_text = skill_document.read_text(encoding="utf-8")
+        deployment_text = deployment_document.read_text(encoding="utf-8")
+        for document, text in (
+            (skill_document, skill_text),
+            (deployment_document, deployment_text),
+        ):
+            for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", text):
+                relative_path = target.split("#", maxsplit=1)[0]
+                if not relative_path or relative_path.startswith(("http:", "https:", "mailto:")):
+                    continue
+                self.assertTrue(
+                    (document.parent / relative_path).is_file(),
+                    f"{document.name} links to missing file: {relative_path}",
+                )
+
+        for required in (
+            "references/capability-matrix.md",
+            "bootstrap.py check",
+            "bootstrap.py install",
+            "from figure_layout import FigureExporter",
+            "preserve",
+            "compact",
+            "not_auditable",
+            "MIT",
+            "Apache-2.0",
+        ):
+            self.assertIn(required, skill_text)
+        self.assertNotIn("docs/", skill_text)
+        self.assertNotIn("tests/", skill_text)
+
+        script_order = (
+            "plotly.min.js",
+            "ranges.js",
+            "layout.js",
+            "annotations.js",
+            "audit.js",
+            "figure-layout.js",
+        )
+        positions = [deployment_text.index(name) for name in script_order]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_python_skill_documents_copy_and_platform_prerequisites(self) -> None:
+        skill_document = REPOSITORY_ROOT / "skills" / "py-infrastructure" / "SKILL.md"
+        text = skill_document.read_text(encoding="utf-8")
+
+        for required in (
+            "scripts/infrastructure/",
+            "Windows",
+            "Linux",
+            "macOS",
+            "标准库",
+        ):
+            self.assertIn(required, text)
+
+        self.assertTrue(
+            (
+                REPOSITORY_ROOT
+                / "skills"
+                / "py-infrastructure"
+                / "scripts"
+                / "infrastructure"
+            ).is_dir()
+        )
+
     def test_skill_manifest_runtime_only(self) -> None:
         with (SKILL_ROOT / "pyproject.toml").open("rb") as stream:
             python_manifest = tomllib.load(stream)
@@ -67,6 +138,12 @@ class StandaloneSkillTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("Runtime not installed:", result.stdout)
+            skill_document = SKILL_ROOT / "SKILL.md"
+            self.assertIn(
+                "Runtime not installed:",
+                skill_document.read_text(encoding="utf-8"),
+            )
             self.assertFalse((copied_skill / ".runtime").exists())
 
     def test_bootstrap_reports_missing_package_managers(self) -> None:

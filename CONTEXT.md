@@ -13,7 +13,7 @@
 - Task 1 测试迁移已提交 `6ac562f`。
 - Task 2 根开发环境隔离已提交 `bae680a`。
 - Task 3 Skill 私有运行时安装器已提交 `705f91a`。
-- Task 4 两个 Skill 的入口和部署文档已完成，并通过本轮验证，尚待提交。
+- Task 4 用户入口和部署文档已提交 `b0edfb4`，本轮测试通过。
 - Task 4 新增文档契约测试，覆盖相对链接、所需入口、脚本加载顺序和安装器输出。
 - Task 4 文档检查为 `5 passed, 1 skipped, 2 subtests passed`。
 - 当前完整 Python 回归为 `279 passed, 1 skipped, 145 warnings, 6 subtests passed`。
@@ -29,9 +29,9 @@
 
 ## 下一步
 
-1. 检查 Task 4 差异并提交文档与契约测试。
-2. 执行 Task 5，仅复制 `skills/` 后做独立黑盒验收。
-3. 按计划完成 Task 6–7、全量复审与最终验证。
+1. 执行 Task 5，仅复制 `skills/` 后做独立黑盒验收。
+2. 执行 Task 6，清理旧环境、更新根文档并复审差异。
+3. 执行 Task 7 并完成全量验证、最终复审和合并。
 
 ## 用户约束
 

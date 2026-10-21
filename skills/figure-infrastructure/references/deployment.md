@@ -43,7 +43,7 @@ python3.12 skills/figure-infrastructure/scripts/setup/bootstrap.py check
 skills/figure-infrastructure/.runtime/python/.venv/bin/python analysis.py
 ```
 
-安装成功后，`check` 对已选组件输出 `ready` 并返回 `0`。运行时缺失或无效时返回 `1`。路径、依赖安装或验证错误时返回 `2`。`check` 不创建运行目录。若 `install` 失败，确认前置命令可用、Python 版本符合范围且网络可访问，再重跑安装器。不要手动把运行时移出 Skill 目录。
+`check` 对所选组件可用时返回 `0`。命令输入无效时返回 `1`。运行时缺失或无效、路径错误或安装验证失败时返回 `2`。`check` 不创建运行目录。若 `install` 失败，确认前置命令可用、Python 版本符合范围且网络可访问，再重跑安装器。不要手动把运行时移出 Skill 目录。
 
 ## Python 调用
 

@@ -37,7 +37,7 @@ python skills/figure-infrastructure/scripts/setup/bootstrap.py install
 python skills/figure-infrastructure/scripts/setup/bootstrap.py check
 ```
 
-`check` 不创建文件。退出码 `0` 表示所选运行时可用，`1` 表示运行时缺失或无效，`2` 表示路径或安装错误。`install` 默认安装 Python 与 JavaScript 依赖。安装前需准备符合 `pyproject.toml` 版本范围的 Python、`uv`、Node.js 和 npm。
+`check` 不创建文件。退出码 `0` 表示所选运行时可用，`1` 表示命令输入无效，`2` 表示运行时缺失、无效或路径及安装错误。`install` 默认安装 Python 与 JavaScript 依赖。安装前需准备符合 `pyproject.toml` 版本范围的 Python、`uv`、Node.js 和 npm。
 新副本会输出 `Runtime not installed: <路径>`。单个组件缺失时会输出 `<component>: missing or invalid runtime`。
 
 按需使用 `--component python` 或 `--component javascript`。Windows、Unix 命令、独立调用方式和恢复步骤见[部署说明](references/deployment.md)。安装失败时先检查 Python 版本、`uv`、Node.js、npm 和网络，再次执行 `install`。不要手动复制 `.runtime/` 到其他 Skill。
@@ -75,6 +75,6 @@ Plotly.js 支持 PNG 和 SVG。导出结果包含 `dataUrl` 和 `audit`。检查
 
 ## 文件与许可
 
-分发时保留本 Skill 的 `scripts/`、`references/`、`pyproject.toml`、`uv.lock`、`package.json` 和 `package-lock.json`。`.runtime/`、`node_modules/` 和 `.venv/` 不随 Skill 源文件打包。
+分发时保留本 Skill 的 `LICENSE`、`scripts/`、`references/`、`pyproject.toml`、`uv.lock`、`package.json` 和 `package-lock.json`。`.runtime/`、`node_modules/` 和 `.venv/` 不随 Skill 源文件打包。
 
-仓库代码使用 MIT 许可。复用的 Nature Figure 脚本保留 Apache-2.0 许可。详情见[上游复用清单](references/reuse-catalog.md)。
+本 Skill 自有代码使用 MIT 许可，见 [`LICENSE`](LICENSE)。复用的 Nature Figure 脚本保留 Apache-2.0 许可。详情见[上游复用清单](references/reuse-catalog.md)。

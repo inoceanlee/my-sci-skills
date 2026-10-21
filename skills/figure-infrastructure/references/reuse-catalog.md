@@ -23,7 +23,7 @@
 - 字号脚本读取 PDF 内容流；它不能检测每一种 PDF Form XObject/字体变换。不足以代替像素视觉检查。
 - `NatureAudit.status` 只有 `passed`、`failed` 或 `not_auditable`；上游未运行成功绝不能报告通过。
 - PNG/SVG 可以从同一 Matplotlib Figure 临时导出 PDF 再审查；Plotly.js SVG 使用浏览器 DOM 检测，不冒充 Nature PDF 审查。
-- 此仓库根许可证为 MIT；以上 Apache-2.0 文件始终保留上游原始许可，不改成 MIT。
+- 本 Skill 第一方代码使用 [MIT 许可](../LICENSE)。Nature Figure 文件保留 Apache-2.0 许可文本。
 
 ## 其他复用
 

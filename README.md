@@ -1,11 +1,31 @@
-# sci-infrastructure
+# my-sci-skills
 
-可独立安装和版本管理的科研开发基础设施 Skills。
+本仓库维护两个可独立复制的科研 Skills：
 
-本项目正在实施：
-- `py-infrastructure`：Python 项目路径、日志、异常与性能审计。
-- `figure-infrastructure`：Matplotlib、Seaborn 和 Plotly 的科研图排版、导出与质量检查。
+- `py-infrastructure`：提供 Python 路径、日志、异常和性能审计工具。
+- `figure-infrastructure`：提供 Matplotlib、Seaborn 和 Plotly 科研绘图工具。
 
-每个 Skill 将程序直接保存在自身的 `scripts/`，通过固定 Git 标签在设备和项目之间复用。
+## 独立分发
 
-当前仅建立项目结构与实施文档，具体能力以各 Skill 的公开接口及测试结果为准。
+本仓库根目录用于开发。分发时只复制 `skills/` 中需要的 Skill 文件夹。
+根目录中的测试、开发依赖和文档不属于 Skill 运行包。
+
+每个 Skill 的入口和调用方式见对应 `SKILL.md`。
+`figure-infrastructure` 的部署细节见 `skills/figure-infrastructure/references/deployment.md`。
+
+`py-infrastructure` 只使用 Python 标准库。
+`figure-infrastructure` 首次运行前，按其 `SKILL.md` 安装私有运行依赖。
+
+## 开发与验证
+
+根目录环境只用于项目开发和测试。安装命令不得修改全局软件环境。
+
+```bash
+uv sync --locked
+npm ci
+uv run --project . --locked python -m pytest -q
+npm test
+```
+
+测试结果说明各能力的实际覆盖范围。
+支持情况和审查边界见 `skills/figure-infrastructure/references/capability-matrix.md`。

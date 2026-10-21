@@ -39,7 +39,7 @@ class BootstrapManager:
             return 2
         if not self.runtime_root.exists():
             print(f"Runtime not installed: {self.runtime_root}")
-            return 1
+            return 2
 
         missing = False
         for component in components:
@@ -49,7 +49,7 @@ class BootstrapManager:
                 missing = True
             else:
                 print(f"{component}: ready")
-        return 1 if missing else 0
+        return 2 if missing else 0
 
     def install(self, components: Sequence[str]) -> int:
         for path in self._runtime_paths():
@@ -246,7 +246,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("check", "install"))
     parser.add_argument("--component", choices=("python", "javascript", "all"), default="all")
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as error:
+        return 0 if error.code == 0 else 1
     components = BootstrapManager.COMPONENTS if args.component == "all" else (args.component,)
     manager = BootstrapManager()
 

@@ -49,3 +49,7 @@ finally:
 - 进程 RAM 指标按平台提供；macOS 上标记为不可用。另记录 `tracemalloc` Python 分配；仅查询已加载且正在使用的 PyTorch/TensorFlow GPU API，不导入或安装框架。
 - 峰值受采样间隔影响。`tracemalloc` 不含所有原生或 GPU 分配；GPU 数据仅代表对应框架统计。不自动判定泄漏或追踪对象生命周期。
 - 不调用 `chdir()`；不使用 `print()`、`logging.basicConfig()` 替代基础设施 logger。
+
+## 许可
+
+本 Skill 使用 MIT 许可。分发时保留同目录的 `LICENSE` 文件。

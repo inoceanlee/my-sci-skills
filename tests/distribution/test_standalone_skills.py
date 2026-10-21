@@ -123,7 +123,7 @@ def run_distribution_smoke(
         timeout=30,
         check=False,
     )
-    if initial_check.returncode != 1 or "Runtime not installed:" not in initial_check.stdout:
+    if initial_check.returncode != 2 or "Runtime not installed:" not in initial_check.stdout:
         raise AssertionError(
             "fresh copy did not report missing runtime\n"
             f"{initial_check.stdout}\n{initial_check.stderr}"
@@ -670,6 +670,14 @@ class StandaloneSkillTests(unittest.TestCase):
         positions = [deployment_text.index(name) for name in script_order]
         self.assertEqual(positions, sorted(positions))
 
+    def test_standalone_skills_include_mit_license(self) -> None:
+        root_license = REPOSITORY_ROOT / "LICENSE"
+        for skill_name in ("py-infrastructure", "figure-infrastructure"):
+            with self.subTest(skill=skill_name):
+                license_path = REPOSITORY_ROOT / "skills" / skill_name / "LICENSE"
+                self.assertTrue(license_path.is_file(), license_path)
+                self.assertEqual(license_path.read_bytes(), root_license.read_bytes())
+
     def test_python_skill_documents_copy_and_platform_prerequisites(self) -> None:
         skill_document = REPOSITORY_ROOT / "skills" / "py-infrastructure" / "SKILL.md"
         text = skill_document.read_text(encoding="utf-8")
@@ -743,7 +751,7 @@ class StandaloneSkillTests(unittest.TestCase):
                 check=False,
             )
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
             self.assertIn("Runtime not installed:", result.stdout)
             skill_document = SKILL_ROOT / "SKILL.md"
             self.assertIn(
@@ -751,6 +759,70 @@ class StandaloneSkillTests(unittest.TestCase):
                 skill_document.read_text(encoding="utf-8"),
             )
             self.assertFalse((copied_skill / ".runtime").exists())
+
+    def test_bootstrap_check_returns_two_for_missing_component(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            copied_skill = Path(temporary) / "figure-infrastructure"
+            shutil.copytree(
+                SKILL_ROOT,
+                copied_skill,
+                ignore=shutil.ignore_patterns(
+                    ".runtime", ".venv", "node_modules", ".pytest_cache", "__pycache__"
+                ),
+            )
+            (copied_skill / ".runtime").mkdir()
+            empty_path = Path(temporary) / "empty-bin"
+            empty_path.mkdir()
+            env = os.environ.copy()
+            env["PATH"] = str(empty_path)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(copied_skill / "scripts" / "setup" / "bootstrap.py"),
+                    "check",
+                    "--component",
+                    "python",
+                ],
+                cwd=copied_skill,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("python: missing or invalid runtime", result.stdout)
+
+    def test_bootstrap_invalid_component_returns_one(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            copied_skill = Path(temporary) / "figure-infrastructure"
+            shutil.copytree(
+                SKILL_ROOT,
+                copied_skill,
+                ignore=shutil.ignore_patterns(
+                    ".runtime", ".venv", "node_modules", ".pytest_cache", "__pycache__"
+                ),
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(copied_skill / "scripts" / "setup" / "bootstrap.py"),
+                    "check",
+                    "--component",
+                    "gpu",
+                ],
+                cwd=copied_skill,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("invalid choice", result.stderr)
+            self.assertFalse((copied_skill / ".runtime").exists())
+
 
     def test_bootstrap_reports_missing_package_managers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -855,6 +927,12 @@ class StandaloneSkillTests(unittest.TestCase):
                 target,
                 ("python", "javascript"),
             )
+
+            for skill_name in ("py-infrastructure", "figure-infrastructure"):
+                source_license = REPOSITORY_ROOT / "skills" / skill_name / "LICENSE"
+                copied_license = report.copied_skills_path / skill_name / "LICENSE"
+                self.assertTrue(copied_license.is_file(), copied_license)
+                self.assertEqual(copied_license.read_bytes(), source_license.read_bytes())
 
             copied_figure = report.copied_skills_path / "figure-infrastructure"
             self.assertEqual(

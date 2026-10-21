@@ -4,6 +4,7 @@
   const issue=(code,ids,rects,extra={})=>({code,elementIds:ids,rectsPt:rects,...extra});
   const MAX_AUDITED_TEXT_ELEMENTS=128;
   const MAX_TEXT_COLLISION_ISSUES=1024;
+  const MAX_AUDITED_TRACES=128;
 
   class PlotlyGeometryAuditor{
     audit(node,preset,protectedAreas=[]){
@@ -289,9 +290,21 @@
           w:plotSize.w*scaleX,h:plotSize.h*scaleY}:null;
       const data=Array.isArray(node.data)?node.data:[];
       if(!Array.isArray(node.data))unknown.push("trace:data");
+      if(data.length>MAX_AUDITED_TRACES)unknown.push("trace:limit");
+      const traces=data.length>MAX_AUDITED_TRACES?[]:data;
       const supported=new Set(["scatter","bar","heatmap","contour"]);
-      data.forEach((trace,index)=>{
+      const selectors={
+        scatter:".scatterlayer g.trace",
+        bar:".barlayer g.trace",
+        heatmap:".heatmaplayer .hm",
+        contour:".contourlayer g.trace"
+      };
+      const traceOrdinals=new Map();
+      const traceGroups=new Map();
+      traces.forEach((trace,index)=>{
         const type=trace.type||"scatter";
+        const ordinal=traceOrdinals.get(type)||0;
+        traceOrdinals.set(type,ordinal+1);
         const id=`data:${type}:${index}`;
         if(!supported.has(type)){
           unknown.push(id);
@@ -302,14 +315,13 @@
           unknown.push(id+":non_finite");
           return;
         }
-        const selector={
-          scatter:".scatterlayer g.trace",
-          bar:".barlayer g.trace",
-          heatmap:".heatmaplayer .hm",
-          contour:".contourlayer g.trace"
-        }[type];
-        const ordinal=data.slice(0,index).filter(item=>(item.type||"scatter")===type).length;
-        const group=selectAll(selector)[ordinal]||null;
+        const selector=selectors[type];
+        let groups=traceGroups.get(selector);
+        if(!groups){
+          groups=selectAll(selector);
+          traceGroups.set(selector,groups);
+        }
+        const group=groups[ordinal]||null;
         if(!group){
           const values=[trace.x,trace.y,trace.z,trace.values].filter(Array.isArray);
           if(values.some(value=>value.length))unknown.push(id+":svg_geometry");

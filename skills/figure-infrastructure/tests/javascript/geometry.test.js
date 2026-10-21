@@ -321,6 +321,27 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
         issue.code==="GEOMETRY_COLLISION"
       ).length<=1024);
     });
+    await t.test("bounds Plotly trace audit before reading excess traces",async()=>{
+      await resetPlot(page);
+      const result=await page.evaluate(preset=>{
+        const node=document.getElementById("plot");
+        const data=Array.from({length:129},()=>({
+          type:"scatter",mode:"lines",x:[],y:[]
+        }));
+        Object.defineProperty(data[128],"x",{
+          get(){throw new Error("TRACE_LIMIT_NOT_ENFORCED");}
+        });
+        node.data=data;
+        return new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
+      },preset);
+      assert.equal(result.geometryStatus,"not_auditable",JSON.stringify(result));
+      assert.equal(result.collisionCount,null);
+      assert.ok(result.geometryIssues.some(issue=>
+        issue.code==="GEOMETRY_NOT_AUDITABLE"&&
+        issue.elementIds.includes("trace:limit")
+      ),JSON.stringify(result.geometryIssues));
+    });
+
     await t.test("marks Plotly spline traces as not auditable",async()=>{
       await resetPlot(page);
       const result=await page.evaluate(async preset=>{
@@ -358,6 +379,33 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
       assert.equal(result.geometryStatus,"failed",JSON.stringify(result.geometryIssues));
       assert.ok(result.geometryIssues.some(item=>item.code==="DATA_OCCLUSION"));
     });
+    await t.test("uses matching SVG groups for same-type traces",async()=>{
+      await resetPlot(page);
+      const result=await page.evaluate(async preset=>{
+        const node=document.getElementById("plot");
+        await Plotly.newPlot(node,[
+          {type:"scatter",mode:"lines",x:[0,1,2],y:[0,1,2],name:"First"},
+          {type:"scatter",mode:"lines",x:[0,1,2],y:[2,1,0],name:"Second"}
+        ],{showlegend:true,transition:{duration:0}});
+        await new Promise(resolve=>requestAnimationFrame(()=>
+          requestAnimationFrame(resolve)
+        ));
+        const path=node.querySelectorAll("path.js-line")[1];
+        const root=path.ownerSVGElement;
+        const bounds=path.getBoundingClientRect();
+        const screenPoint=new DOMPoint(bounds.left+bounds.width/2,bounds.top+bounds.height/2);
+        const target=screenPoint.matrixTransform(root.getScreenCTM().inverse());
+        node.querySelector(".legend").setAttribute(
+          "transform",`translate(${target.x},${target.y})`
+        );
+        return new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
+      },preset);
+      assert.equal(result.geometryStatus,"failed",JSON.stringify(result.geometryIssues));
+      assert.ok(result.geometryIssues.some(item=>
+        item.code==="DATA_OCCLUSION"&&item.elementIds.includes("data:scatter:1")
+      ),JSON.stringify(result.geometryIssues));
+    });
+
     await t.test("reports SVG transform failures as not auditable",async()=>{
       await resetPlot(page);
       const result=await page.evaluate(preset=>{

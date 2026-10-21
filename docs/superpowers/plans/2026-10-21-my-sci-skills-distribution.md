@@ -184,8 +184,8 @@
 - [x] **Step 3：品牌与 README。** 根 README 和 `AGENTS.md` 当前项目名改为 `my-sci-skills`；强调仓库根只用于开发，`skills/` 可独立复制；同步 `CONTEXT.md` 中活跃路径与下一步，历史文件名引用按历史标签保留。
 - [x] **Step 4：总回归。** 根 Python 和 JS 全套测试再次运行并记录具体 passed/failed/warnings/exit code；导出 Python/Plotly 单双栏代表样图并实际读取联系表与关键区域，验证未增加裁切、重叠和多余留白。
 - [x] **Step 5：分发体积门槛。** 在 Temp 只复制未安装依赖的 `skills/`，总大小 ≤2 MiB；源码、锁文件和许可证齐全。Windows `core.autocrlf=true` 时，三份 `LICENSE` 保持字节一致。另检查安装后的 `.runtime/` 位于对应 Skill 内，体积不受 2 MiB 限制。审查完整差异、个人路径与 `git diff --check`，独立 reviewer 复核。
-- [ ] **Step 6：提交及合并。** 以 `docs(repo): describe standalone my-sci-skills distribution` 提交文档和开发目录变更；在任务分支完成全套验收后，于原仓库主检出快进合并到 `main`，核对源码及 Git 干净，再删除任务分支。
-- [ ] **Step 7：清理旧安装形态。** 合并后先验证根目录开发 `.venv/node_modules` 和 Temp Skill 内 `.runtime/` 都可用；再将主检出 `skills/figure-infrastructure/` 下旧 `.venv`、`node_modules`、`.pytest_cache` 移至 Temp 备份。主仓库 `skills/` 处于**尚未安装 .runtime 的干净源码态**，物理大小 ≤2 MiB。移动失败则保留旧目录并标记未完成，禁止强删。
+- [x] **Step 6：提交及合并。** 以 `docs(repo): describe standalone my-sci-skills distribution` 提交文档和开发目录变更；后续 `.gitattributes` 修复提交 `60b3293` 快进合入 `main`。主检出 Python 与 JavaScript 全量回归通过，任务工作树和分支已删除。
+- [x] **Step 7：清理旧安装形态。** 根开发环境与 Temp 独立副本运行验证通过；旧 `.venv`、`node_modules`、`.pytest_cache` 以及仅含缓存的残留测试目录移至 Temp 备份。主仓库 `skills/` 为 357,450 字节干净源码，不含 `.runtime`、旧环境、测试或 Python 缓存。所有备份保留，可用于回滚。
 - **回滚：**Git 以每任务提交回退；旧缓存的临时备份在回滚验证前保留，不强制清空。
 
 ## Task 7：本地 Git 仓库目录更名（仅 Task 6 通过后）

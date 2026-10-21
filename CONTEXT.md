@@ -6,38 +6,38 @@
 
 ## 当前状态
 
-- 绘图几何审查 Task 1–6 已合入主分支，基线提交为 `162c003`。
-- 分发计划 Task 1–5 已提交到 `my-sci-skills-distribution`。
-- Task 6 主提交 `92d5841` 已快进合入 `main`。
-- 合并后 Python 全量测试发现 2 个许可证字节比较子测试失败。283 项通过，1 项跳过，6 个子测试通过，另有 145 条警告。
-- 根因是 Windows 全局 `core.autocrlf=true` 让根许可证保持 LF、两个子目录许可证检出为 CRLF。
-- Temp 任务分支新增 `.gitattributes` 规则 `LICENSE -text`，禁止 Git 转换许可证字节。
-- 从 Git 索引导出的三份许可证大小均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
-- 许可证专项测试为 `1 passed, 2 subtests passed`。任务分支 Python、JavaScript 全量回归均通过。
-- 任务分支 Python 全量结果为 `283 passed, 1 skipped, 8 subtests passed`，用时 292.33 秒，另有 145 条弃用警告。
-- 任务分支 JavaScript 全量结果为 `70 passed, 0 failed`，用时 146.89 秒。
-- 主检出许可证刷新和 Python、JavaScript 全量回归仍待完成。
-- 当前任务分支从 `92d5841` 增加 `.gitattributes`、计划和上下文改动，尚未提交或合并。
-- 修复差异的独立复审未发现问题。
-- 主检出提交为 `92d5841`，跟踪文件干净。根 `.venv` 和 `node_modules` 已按锁文件创建。
-- 根 `.venv` 使用已有 Python 3.13.16，安装大小为 190,122,258 字节。
-- 根 `node_modules` 安装大小为 19,833,441 字节。旧 Skill 环境仍在原位。
-- 分发测试为 `9 passed, 1 skipped, 4 subtests passed`。
-- 修改后的独立复制、安装、运行、删除和重装测试为 `1 passed`，用时 98.59 秒。
-- Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。
-- 52 项未审查结果对应能力矩阵中的 `native_only` 类型。不得把该结果描述为完整自动几何审查通过。
-- 已读取全部 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠。
-- 最新干净 `skills/` 副本为 356,507 字节，低于 2 MiB。副本没有 `.venv`、`node_modules`、`.pytest_cache`、`.runtime`、`tests` 或 `__pycache__`。
-- 两个独立 Skill 目录都带有与根许可证相同的 MIT 文本。Nature Figure 上游目录保留 Apache-2.0 许可证。
-- Task 6 退出码修复和许可证换行修复的独立差异复审均未发现问题。
-- Git 无远端。本计划不创建公开仓库或推送。
-- 本地计划已获用户授权。需先合并换行修复并通过主检出全量回归，再继续旧环境清理和 Task 7 更名。
+- 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`。
+- 当前主提交为 `60b3293`。
+- 分发主提交为 `92d5841`。
+- 后续提交 `60b3293` 增加 `.gitattributes` 规则 `LICENSE -text`。该规则固定 Windows 与 Unix 检出的许可证字节。
+- 三份 MIT 许可证均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
+- 主分支 Python 全量回归：283 passed、1 skipped、8 subtests passed、145 warnings，用时 322.26 秒。
+- 主分支 JavaScript 全量回归：70 passed、0 failed，用时 18.09 秒。
+- 许可证专项回归：1 passed、2 subtests passed。独立复制安装、运行、删除和重装回归：1 passed，用时 96.40 秒。
+- 以上全量回归在移动旧 Skill 环境前通过。
+- 移动后，根 Python 环境仍可导入 `figure_layout`。目录更名后运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`。
+- 根 `.venv` 和 `node_modules` 使用项目锁文件管理，并保留在仓库根目录。
+- 本次未修改全局软件环境。
+- 旧 Skill `.venv`、`node_modules`、`.pytest_cache`、残留测试目录和 Python 缓存已移至系统 Temp 的 `sci-infrastructure-legacy-skill-env-backup/`，用于回滚。
+- 该备份合计 240,725,748 字节。
+- 清理时也移动了 Git 忽略规则匹配的旧 `tests/` 和 `__pycache__/`。检查确认它们只含 `.pyc`，内容仍在同一 Temp 备份中。
+- 当前 `skills/` 源码树为 357,450 字节。扫描确认没有 `.runtime`、`.venv`、`node_modules`、`.pytest_cache`、`__pycache__` 或 `tests/`。
+- 独立复制测试报告 9 passed、1 skipped、4 subtests passed。实际安装后的 Temp 副本可运行 Python 与 JavaScript，并可删除后重装。
+- Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应能力矩阵中的 `native_only` 类型。
+- 已实际读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。
+- 视觉检查未发现明显裁切或重叠。该结果不代表 52 项自动几何审查通过。
+- Windows 的 `core.autocrlf=true` 已由 `.gitattributes` 规则处理。
+- 三份许可证字节一致。
+- 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
+- 主仓库目录仍为 `sci-infrastructure`。
+- Task 7 更名和更名后的验证尚未完成。
+- 当前没有配置 Git remote。本地更名不包含创建公开仓库或推送。
 
 ## 下一步
 
-1. 提交 `LICENSE -text` 修复，再快进合入 `main`。
-2. 将主检出三份许可证刷新为索引字节，重跑 Python 与 JavaScript 全量测试。
-3. 验证 Temp Skill 运行环境，再把旧 Skill 环境移入 Temp 备份，并完成本地仓库更名。
+1. 完成 Task 7：确认只剩主工作树、目标目录空闲、无活动终端，再将本地目录更名为 `my-sci-skills`。
+2. 在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`。随后同步上下文，检查文档引用，再删除已完成的设计稿和计划稿。
+3. 后续独立验收负责公开仓库创建、完整历史安全审查和推送。当前没有 Git remote。
 
 ## 用户约束
 
@@ -127,14 +127,13 @@
 
 ## 活跃问题
 
-- 主检出许可证换行刷新和 Python 全量回归待完成。
 - Python 3.14.7 图族测试出现 `itertools.count` deepcopy 错误。Python 3.14 兼容性未解决。
 - Python 顶点上限不保护布局优化器的前置绘制。当前接受为非阻塞限制。
 - Plotly 可选标题曾导致顶部净空 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题，不代表问题已解决。
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- Task 6 旧 Skill 环境清理和 Task 7 更名尚未完成。
+- 本地仓库目录更名和更名后路径验证尚未完成。
 
 ## 验证入口
 

@@ -8,7 +8,7 @@
 
 - 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`。
 - 分发主提交为 `92d5841`。
-- 后续提交 `60b3293` 增加 `.gitattributes` 规则 `LICENSE -text`。该规则固定 Windows 与 Unix 检出的许可证字节。
+- 上一阶段主分支基线为 `60b3293`；该提交添加 `.gitattributes` 规则 `LICENSE -text`，固定 Windows 与 Unix 检出的许可证字节。
 - 三份 MIT 许可证均为 1,088 字节，SHA-256 均为 `57d999d730aea3c7f319c4a85bbd2cb43c63a0d4d7691619a4cb8138305625f4`。
 - 主分支 Python 全量回归：283 passed、1 skipped、8 subtests passed、145 warnings，用时 322.26 秒。
 - 主分支 JavaScript 全量回归：70 passed、0 failed，用时 18.09 秒。
@@ -30,13 +30,13 @@
 - 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
 - 主仓库目录仍为 `sci-infrastructure`；Task 7 更名与新路径验证暂缓。
 - 已确认 RTK 和 PowerShell 子进程在系统 Temp 执行；没有终端、脚本或命令行引用旧仓库路径的进程。`Rename-Item` 仍报告目录占用，现有工具无法识别句柄持有者；当前主工作区仍登记在旧路径。后续在不持有旧路径的独立工作区确认占用来源后，再决定是否更名。
-- 当前没有配置 Git remote。本地更名不包含创建公开仓库或推送。
+- 本地没有配置 Git remote。对设计稿目标 `https://github.com/inoceanlee/my-sci-skills.git` 的只读查询返回 `Repository not found`；远端不存在、URL 已变更或私有仓库当前不可读，仍无法区分。
 
 ## 下一步
 
 1. 在不持有旧路径的独立工作区确认目录占用来源和目标状态。释放已确认的占用后，再完成 Task 7 更名；占用仍未知时保留旧路径。
 2. 更名后在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`，同步上下文并检查文档引用，再删除已完成的设计稿和计划稿。
-3. 后续独立验收负责公开仓库创建、完整历史安全审查和推送。当前没有 Git remote。
+3. 用户已授权同步到 K 的仓库；设计稿记录的目标当前返回 `Repository not found`，本地也没有 remote。按已批准计划，本阶段不创建公开仓库或推送；待既有目标可达后核对历史再同步。
 
 ## 用户约束
 
@@ -49,7 +49,7 @@
 - 视觉检查必须读取实际导出图片。不得只凭测试声称排版通过。
 - 无法审查的图形必须标记 `not_auditable`，不能报告为零冲突或通过。
 - 不为通过审查而篡改固定物理范围、固定色标、真实数据或必需标签。
-- 本地实施计划已获用户授权。公开仓库创建和推送仍需独立验收。
+- 用户已授权合并到 `main` 并同步到 K 的仓库；本地尚无 Git remote，实际同步待核验目标仓库及历史状态。
 
 ## 关键决策
 

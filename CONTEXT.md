@@ -9,37 +9,30 @@
 ## 当前状态
 
 - 基础绘图几何审查 Task 1–6 已合入主分支，最终提交为 `162c003`。
-- 当前分发任务在 Temp 工作树分支 `my-sci-skills-distribution` 实施。
-- Task 1 测试迁移已提交 `6ac562f`。
-- Task 2 根开发环境隔离已提交 `bae680a`。
-- Task 3 Skill 私有运行时安装器已提交 `705f91a`。
-- Task 4 用户入口和部署文档已提交 `b0edfb4`，本轮测试通过。
-- Task 4 新增文档契约测试，覆盖相对链接、所需入口、脚本加载顺序和安装器输出。
-- Task 4 文档检查为 `5 passed, 1 skipped, 2 subtests passed`。
-- 当前完整 Python 回归为 `279 passed, 1 skipped, 145 warnings, 6 subtests passed`。
-- 当前完整 JavaScript 回归为 `70/70`。
-- 新增 Figure Skill 文档通过中文清晰度检查，硬违规为 0。
-- Task 3 的实际独立安装曾通过。默认套件跳过依赖网络的安装集成测试。
-- 安装集成测试曾因 PyPI 下载 `hatchling` 超时失败。该次失败属于外部网络，不等于安装代码失败。
-- 根开发环境固定 CPython 3.13.16，uv 禁止自动下载 Python。
-- Figure Skill 声明 Python `>=3.12,<3.15`。Python 3.14.7 曾在 30 个图族测试中触发相同的 `itertools.count` deepcopy 错误。相同代码与依赖在 Python 3.13.16 通过，3.14 兼容性仍未解决。
-- 旧主分支验收生成过 Python、Plotly PNG 与 SVG 图。当前分发任务没有修改绘图核心代码。
-- 当前 Temp 工作树与测试缓存均位于系统 Temp，不在 `files` 目录。
-- 主仓库没有配置 Git remote。用户要求本轮不创建远端或执行推送。
+- 当前分发任务在系统 Temp 工作树分支 `my-sci-skills-distribution` 实施。
+- Task 1 测试迁移已提交 `6ac562f`；Task 2 根开发环境隔离已提交 `bae680a`。
+- Task 3 Skill 私有运行时安装器已提交 `705f91a`；Task 4 用户入口和部署文档已提交 `b0edfb4`。
+- Task 5 独立分发验收已提交 `d7ead22`。
+- Task 5 默认分发测试为 `6 passed, 1 skipped, 2 subtests passed`。
+- Task 5 实际隔离安装与重装验收通过：干净复制 `skills/`、私有 Python/Plotly 运行时和缓存、Python/浏览器导出、删除后重装均在 Temp 完成。
+- Task 5 Python/Plotly 输出覆盖单栏与双栏尺寸、数据状态和审查状态；未审查图形明确报告 `not_auditable`。
+- 最近完整 Python 回归为 `280 passed, 1 skipped, 145 warnings, 6 subtests passed`；完整 JavaScript 回归为 `70/70`。
+- 根开发环境固定 CPython 3.13.16，uv 禁止自动下载 Python。Python 3.14.7 曾在图族测试中触发相同的 `itertools.count` deepcopy 错误；3.14 兼容性仍未解决。
+- 当前分发任务没有修改绘图核心代码。Task 5 测试生成文件与安装副本均位于系统 Temp。
+- 主仓库没有配置 Git remote。本计划不创建 GitHub 仓库或推送。
 
 ## 下一步
 
-1. 执行 Task 5，仅复制 `skills/` 后做独立黑盒验收。
-2. 执行 Task 6，清理旧环境、更新根文档并复审差异。
-3. 执行 Task 7 并完成全量验证、最终复审和合并。
+1. 执行 Task 6：检查旧本地环境，更新根 README、AGENTS 和 CONTEXT，完成总复审与回归。
+2. Task 6 合并并验证后，执行 Task 7：安全清理遗留工作树并将本地仓库目录更名为 `my-sci-skills`。
+3. 完成目录体积、视觉、独立分发、Git 历史与远端状态的最终验收。
 
 ## 用户约束
 
 - Skill 的唯一程序实现放在该 Skill 自己的 `scripts/`。
 - 不修改全局软件环境。依赖只安装在项目或 Skill 私有环境中。
-- 任务工作树、测试渲染、截图、图表和临时脚本放系统 Temp。
+- 任务工作树、测试渲染、截图、图表和临时脚本放系统 Temp，不放 `files` 目录。
 - 正式测试源码放仓库根 `tests/`，不放待分发的 `skills/`。
-- 不把工作树放在 `files` 目录下。
 - 原始 ADC 数据、历史报告和其他科研项目文件只读。
 - 公开前检查完整 Git 历史、个人绝对路径、凭据、第三方许可和 Notice。
 - 视觉检查使用独立离线浏览器或无界面导出。不触发下载，也不操作用户正在使用的浏览器。
@@ -48,7 +41,7 @@
 - 无法审查的图形必须标记 `not_auditable`，不能报告为零冲突或通过。
 - 固定物理范围、固定色标、真实数据、标签和必需角色不可为通过审查而篡改或省略。
 - 用户已授权本任务后续安全扫描自动执行，不需再次询问。
-- 本轮设计和计划已由用户明确授权执行。不要重写设计稿或计划稿。
+- 本轮设计和计划已由用户明确授权执行，不重写设计稿或计划稿。
 
 ## 关键决策
 
@@ -86,15 +79,14 @@
 - 非等比或剪切变换下的常规描边返回 `not_auditable`。
 - Plotly `layout.shapes` 尚未纳入几何碰撞检测。存在可见形状时返回 `not_auditable`。
 - Plotly 曲线路径命令及无法测量的变换返回 `not_auditable`。
-- Nature PDF 文本审计遇到未处理流警告时返回 `not_auditable`。
-- Nature PDF 碰撞 verdict 仅接受已知值。未知 verdict 不会变成通过。
+- Nature PDF 审计遇到未处理流警告时返回 `not_auditable`；碰撞 verdict 只接受已知值。
 - 代表图族测试不保证所有图表类型或任意用户数据均通过几何检查。
 
 ### 分发与运行时
 
 - 分发时只复制 `skills/`。测试、根开发配置和开发依赖不随 Skill 分发。
 - `figure-infrastructure` 通过 `scripts/setup/bootstrap.py` 管理 `.runtime/`。
-- Python 环境、Node 模块与包管理器缓存均放在 Skill 自己的 `.runtime/`。
+- Python 环境、Node 模块与 uv/npm 缓存均放在 Skill 自己的 `.runtime/`。
 - `bootstrap check` 不创建运行目录。`install` 只安装锁文件声明的运行依赖。
 - 安装器不下载 Python，不修改全局 Python、Node.js、npm 或包缓存。
 - `py-infrastructure` 只依赖 Python 标准库，无需独立虚拟环境。
@@ -106,11 +98,13 @@
 
 ### Git 与发布
 
-- Task 6 按 2026-10-20 几何验收设计完成，提交 `162c003` 已进入主分支。
+- 基础绘图几何审查已合入主分支，提交 `162c003`。
 - 当前本地分发任务分支以 Git 提交逐项保存。完成验收后再快进合并到主分支。
 - 合并前复查完整历史中的个人路径、凭据、第三方许可和 Notice。
 - 用户未要求本轮创建 GitHub 远端。远端配置保持不变。
 - Nature PDF 解压大小限制和文本比较复杂度属于公开发布前处置门槛。
+- Task 6 要先完成旧环境审查、文档与回归；旧 Skill 环境只能在合并验证后移至 Temp 备份，不强制删除。
+- Task 7 本地仓库更名只在主检出干净且遗留工作树已安全清理后进行。
 
 ## 可复用踩坑
 
@@ -132,9 +126,10 @@
 
 - Python 3.14.7 图族测试出现 `itertools.count` deepcopy 错误。Python 3.14 兼容性未解决。
 - Python 顶点上限不保护排版优化器的前置绘制。当前接受为非阻塞限制。
+- Plotly 默认图标题曾因顶部净空不足导致合成图导出审查失败：测得 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题验证运行时，不代表标题布局问题已修复。
 - PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
 - Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- Task 5–7 与 Task 10–11 尚未完成。
+- Task 6、Task 7 与原计划 Task 10–11 尚未完成。
 
 ## 验证入口
 
@@ -165,7 +160,7 @@
 - `skills/figure-infrastructure/scripts/python/figure_layout/`：Matplotlib/Seaborn 实现。
 - `skills/figure-infrastructure/scripts/javascript/`：Plotly.js 实现。
 - `skills/py-infrastructure/SKILL.md`：Python 项目基础设施入口。
-- `tests/distribution/test_standalone_skills.py`：独立分发契约测试。
+- `tests/distribution/test_standalone_skills.py`：独立分发验收和复制运行测试。
 - `tests/figure-infrastructure/python/test_geometry_audit.py`：Python 几何回归。
 - `tests/figure-infrastructure/javascript/geometry.test.js`：Plotly 几何回归。
 - `README.md`、`LICENSE`：项目用途、公开许可与安装入口。

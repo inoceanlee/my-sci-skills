@@ -544,9 +544,6 @@ requires-dist = [
     { name = "textalloc", specifier = ">=1.1" },
 ]
 
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8" }]
-
 [[package]]
 name = "seaborn"
 version = "0.13.2"

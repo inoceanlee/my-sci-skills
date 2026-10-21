@@ -23,13 +23,14 @@
 - Nature PDF FlateDecode 解压大小限制和文本比较复杂度仍是公开发布前处置项。
 - 当前主仓库没有配置 Git remote，GitHub 目标名称已定为 `inoceanlee/my-sci-skills`；用户要求先完成 Skills 独立分发设计与实施验收，再发布。
 - 2026-10-21：用户已明确要求执行最新设计稿与计划稿，当前按计划实施；设计与计划文件保持原样。
-- Task 1 已完成并提交 `6ac562f`。Task 2 根开发清单、锁文件已建立；工作树、Python/Node 环境与缓存均位于系统 Temp。
-- 根环境原选 Python 3.14.7，图族测试出现 30 项相同的 `itertools.count` deepcopy 错误；相同源码和依赖在 Python 3.13.16 的针对性测试通过。为复现可用开发环境，根项目固定 CPython 3.13.16，uv 禁止自动下载 Python；库元数据仍声明支持 3.12–3.14。根 Python 回归 `274 passed`、4 个 subtests passed、145 warnings；JavaScript `70/70` 通过。导入路径指向 Skill 源码。Python 3.14 兼容性未解决。
+- Task 1 已提交 `6ac562f`；Task 2 已提交 `bae680a`。Task 3 已调整运行清单和锁文件，并新增 Skill 内 `.runtime/` 引导器与独立分发测试；尚未提交。
+- 根开发环境原选 Python 3.14.7，图族测试出现 30 项相同的 `itertools.count` deepcopy 错误；相同源码和依赖在 Python 3.13.16 的针对性测试通过。根项目固定 CPython 3.13.16，uv 禁止自动下载 Python；Skill 仍声明支持 3.12–3.14。Python 3.14 兼容性未解决。
+- Task 2 Python 全套 `274 passed`、4 个 subtests passed、145 warnings，JS `70/70`。Task 3 默认 Python 全套 `276 passed`、1 个联网安装测试跳过、145 warnings；安装集成测试显式运行 `1 passed`，另一次因 PyPI hatchling 下载超时失败。JS `70/70`，清单/检查/缺少包管理器测试 `3 passed`、2 个 subtests passed。
 
 ## 下一步
 
-1. 完成 Task 2 的 Python/JS 全套回归与锁定环境验证。
-2. 继续执行 Task 3–7，按计划逐项验证独立分发、文档和本地目录更名。
+1. 完成 Task 3 差异复审和提交。
+2. 继续执行 Task 4–7，按计划验证独立分发、文档、清理及本地仓库更名。
 3. 完成 Task 10/11、公开发布前资源安全修复和 CI 验收后，再创建 `inoceanlee/my-sci-skills` 公开远端。
 
 ## 用户约束

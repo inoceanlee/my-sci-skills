@@ -11,11 +11,10 @@
 - `60b3293` 添加 `.gitattributes` 规则 `LICENSE -text`，固定 Windows 与 Unix 检出的许可证字节。
 - 项目目录已更名为 `my-sci-skills`。Git 历史保留在原仓库中。
 - 更名后在新路径运行 `npm test`：70 passed、0 failed。
+- 更名后 Python 全量测试：283 passed、1 skipped、8 subtests passed、145 warnings，用时 254.81 秒。
 - 更名后运行 `tests/py-infrastructure/test_contract.py`：1 passed。
 - 更名后的许可证一致性回归：1 passed、2 subtests passed。
 - 三份 MIT 许可证署名已更新为 `my-sci-skills contributors`。三份文件均为 1,083 字节，SHA-256 为 `0820ef78f70df313d665f6a0f5ee04a1e054c621a1a6d0229a9b1c8127d3e372`。
-- 旧路径下的 Python 全量回归为 283 passed、1 skipped、8 subtests passed、145 warnings，用时 322.26 秒。
-- 旧路径下的 JavaScript 全量回归为 70 passed、0 failed，用时 18.09 秒。
 - 独立复制测试为 9 passed、1 skipped、4 subtests passed。复制后的 Skill 可安装、运行、删除并重装。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应能力矩阵中的 `native_only` 类型。
 - 已读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠；这不代表 52 项自动审查通过。

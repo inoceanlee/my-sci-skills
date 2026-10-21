@@ -29,12 +29,12 @@
 - 三份许可证字节一致。
 - 任务分支和旧 `refactor/skill-runtime-boundary` 工作树均无改动。随后已清理两个工作树。
 - 主仓库目录仍为 `sci-infrastructure`；Task 7 更名与新路径验证暂缓。
-- 已确认 RTK 和 PowerShell 子进程在系统 Temp 执行；没有终端、脚本或命令行引用旧仓库路径的进程。`Rename-Item` 仍报告目录占用，现有工具无法识别句柄持有者；当前主工作区仍登记在旧路径。后续在不持有旧路径的独立工作区确认占用来源后，再决定是否更名。
+- 已确认 RTK 和 PowerShell 子进程在系统 Temp 执行；没有终端、脚本或命令行引用旧仓库路径的进程。父目录当前未列出目标 `my-sci-skills`。`handle.exe` 不可用，Scoop 未安装 `sysinternals`；`openfiles /query` 要求系统全局跟踪且返回拒绝访问。`Rename-Item` 仍报告目录占用，句柄持有者未知；当前主工作区仍登记在旧路径。
 - 本地没有配置 Git remote。对设计稿目标 `https://github.com/inoceanlee/my-sci-skills.git` 的只读查询返回 `Repository not found`；远端不存在、URL 已变更或私有仓库当前不可读，仍无法区分。
 
 ## 下一步
 
-1. 在不持有旧路径的独立工作区确认目录占用来源和目标状态。释放已确认的占用后，再完成 Task 7 更名；占用仍未知时保留旧路径。
+1. 在不持有旧路径的独立工作区继续确认目录句柄来源；目标目录当前未列出。只有确认并释放占用、且目标仍空闲时才完成 Task 7 更名；否则保留旧路径。
 2. 更名后在新路径运行 `npm test` 和 `tests/py-infrastructure/test_contract.py`，同步上下文并检查文档引用，再删除已完成的设计稿和计划稿。
 3. 用户已授权同步到 K 的既有仓库；设计稿目标返回 `Repository not found`，本地无 remote。取得可访问的既有目标后，先核对历史再按授权同步；不创建新仓库、不覆盖远端独有提交。
 

@@ -2,14 +2,16 @@
 
 ## 项目目标
 
-维护两个可独立复制的科研 Skills。公开发布前完成测试、许可、安全和 CI 验收。
+维护两个可独立复制的科研 Skills。正式版本发布前完成测试、许可、安全和 CI 验收。
 
 ## 当前状态
 
 - 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`。
-- 分发主提交为 `92d5841`。
+- 独立分发主提交为 `92d5841`。
 - `60b3293` 添加 `.gitattributes` 规则 `LICENSE -text`，固定 Windows 与 Unix 检出的许可证字节。
-- 项目目录已更名为 `my-sci-skills`。Git 历史保留在原仓库中。
+- 项目目录已更名为 `my-sci-skills`。完整 Git 历史已推送到公开仓库 `https://github.com/inoceanlee/my-sci-skills`。
+- 仓库可见性为 `PUBLIC`，默认分支为 `main`。初次推送的 `main` HEAD 为 `85535df`，并包含完整本地历史。
+- 本地 `origin` 指向上述 GitHub 仓库。`main` 跟踪 `origin/main`。
 - 更名后在新路径运行 `npm test`：70 passed、0 failed。
 - 更名后 Python 全量测试：283 passed、1 skipped、8 subtests passed、145 warnings，用时 254.81 秒。
 - 更名后运行 `tests/py-infrastructure/test_contract.py`：1 passed。
@@ -18,16 +20,15 @@
 - 独立复制测试为 9 passed、1 skipped、4 subtests passed。复制后的 Skill 可安装、运行、删除并重装。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应能力矩阵中的 `native_only` 类型。
 - 已读取 Python 联系表、代表 PNG、Plotly 联系表和 SVG。未发现明显裁切或重叠；这不代表 52 项自动审查通过。
-- 本地没有配置 Git remote。
-- GitHub 工具无法解析 `inoceanlee/my-sci-skills` 或旧目标 `inoceanlee/sci-infrastructure`。无法区分仓库不存在、私有或当前账户无权访问。
-- 没有创建仓库，也没有推送。用户已授权同步到 K 的既有仓库，但尚未确认可访问的目标和远端历史。
-- Task 7 的本地更名和新路径测试已完成。同步到既有远端仍待目标可访问。
+- 完整历史扫描未发现常见高置信凭据、密码赋值、本机绝对路径或密钥文件名。
+- Nature Figure 上游脚本保留 Apache-2.0 许可证副本，复用清单记录上游仓库、固定提交和文件哈希。
+- 用户要求先创建公开同名仓库，后续再处理已知问题。公开代码仍有未解决限制，正式版本门槛见“活跃问题”。
 
 ## 下一步
 
-1. 取得可访问的既有仓库 owner/repo 和分支信息。
-2. 检查远端提交历史。仅在更新可快进且不覆盖远端独有提交时同步。
-3. 远端不可访问时保留本地结果，不创建新仓库，并说明缺少的目标信息。
+1. 为 `audit_pdf_text.py` 的 FlateDecode 解压增加输出大小上限，并添加回归测试。
+2. 评估 Nature PDF 文本碰撞审查的平方复杂度和输入规模风险。
+3. 完成 CI、安装和安全门槛后，再发布正式版本标签。
 
 ## 用户约束
 
@@ -36,11 +37,11 @@
 - 任务工作树、测试产物、截图、图表和临时脚本放系统 Temp，不放 `files` 目录。
 - 测试源码放根目录 `tests/`，不放进可分发的 `skills/`。
 - 原始 ADC 数据、历史报告和其他科研项目文件只读。
-- 公开发布前检查完整 Git 历史、个人路径、凭据、第三方许可和 Notice。
+- 公开内容发布前检查完整 Git 历史、个人路径、凭据、第三方许可和 Notice。
 - 视觉检查必须读取实际导出图片。不得只凭测试声称排版通过。
 - 无法审查的图形必须标记 `not_auditable`，不能报告为零冲突或通过。
 - 不为通过审查而篡改固定物理范围、固定色标、真实数据或必需标签。
-- 合并到 `main` 和同步到既有仓库已获用户授权。不得创建新仓库或覆盖远端独有提交。
+- 用户已授权创建 `inoceanlee/my-sci-skills` 公开仓库并同步本地 `main`。不得覆盖远端独有提交。
 
 ## 关键决策
 
@@ -121,9 +122,8 @@
 - Python 顶点上限不保护布局优化器的前置绘制。当前接受为非阻塞限制。
 - Plotly 可选标题曾导致顶部净空 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题，不代表问题已解决。
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查。当前视觉结果如实标记为 `incomplete`。
-- PDF FlateDecode 解压缺少输出大小限制。公开发布前增加资源上限。
-- Nature PDF 文本碰撞比较存在平方复杂度。公开发布前评估输入规模和处置方式。
-- 同步目标当前不可访问。先取得 K 的既有仓库地址，再核验远端历史。
+- `skills/figure-infrastructure/scripts/third_party/nature_figure/audit_pdf_text.py` 的 PDF FlateDecode 解压缺少输出大小限制。公开代码仍含此限制；修复前不发布正式版本标签。
+- Nature PDF 文本碰撞比较存在平方复杂度。公开代码仍含此限制；评估输入规模和处置方式后再发布正式版本标签。
 
 ## 验证入口
 
@@ -142,7 +142,7 @@
 ## 文件入口
 
 - `AGENTS.md`：实施、隔离环境、测试和发布规则。
-- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：后续 CI 与公开发布门槛，计划目标为 `inoceanlee/my-sci-skills`；远端状态尚未核实。
+- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：CI 与正式版本发布门槛，目标仓库已创建并公开。
 - `docs/superpowers/specs/2026-10-19-sci-infrastructure-design.md`：早期方案记录，保留原始项目名和目标。
 - `skills/figure-infrastructure/SKILL.md`：科研绘图 Skill 操作入口。
 - `skills/figure-infrastructure/references/deployment.md`：独立部署与调用说明。

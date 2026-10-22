@@ -2,151 +2,79 @@
 
 ## 项目目标
 
-维护两个可独立复制的科研 Skills。正式版本发布前完成测试、许可、安全和 CI 验收。
+维护可独立复制的 `py-infrastructure` 和 `figure-infrastructure` 科研 Skills，以项目自有环境提供 Python/Plotly 依赖；研发代码、测试与许可证留在公开仓库 `inoceanlee/my-sci-skills`。
 
 ## 当前状态
 
-- 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`；公开仓库为 `inoceanlee/my-sci-skills`。
-- Temp 中有两个工作树：开发分支 `project-api-environment`，发布快照分支 `sync-main-snapshot`。
-- 项目环境 API 和 Skill 文档迁移提交为 `8aa4dcf`、`29c9d36`、`0b4c5d3`。
-- Task 4C CI 的首次运行 `39710614748` 因 job 级 `runner.temp` 表达式无效而失败；`50804b4` 改用 `RUNNER_TEMP` 写入 `GITHUB_ENV`。
-- 托管 CI `39714629861` 与诊断运行 `39716114434` 均只在 Ubuntu JavaScript 几何测试失败；其余 7 个 job 通过。日志显示测试先选中 `tick:y:2` 与 legend 的碰撞，目标 `axis:y_title` 与 legend 碰撞排在第二。
-- 本地 Python 全量 294 passed、149 warnings、6 subtests；JavaScript 全量 71 passed；Plotly Python 集成回归 1 passed。
-- 远端 `main` 仍在 `79a4048`，该提交的托管 CI 失败。几何测试现按目标轴标题和图例筛选碰撞，并在断言失败时输出审计结果；提交为快照 `3622043`、开发分支 `1258dfe`，尚未通过新托管 CI。本地 `main` 历史含个人路径，禁止推送。
-
-- Task 4A 资源限制修复已提交 `539a094`；Python 3.14.7 全量回归为 294 passed、22 warnings、6 subtests。
-- Task 4A 非功能格式改动已在 `3ede174` 清理；21 项资源与 Nature 审计测试通过，补丁哈希已更新。
-
-## Task 4B：Python 3.14 图表深拷贝
-
-- 根因：Matplotlib `UnitData._counter` 使用 `itertools.count`；Python 3.14 不再支持深拷贝该迭代器。
-- `FigureExporter` 在 Python 3.14+ 为类别计数器构建独立副本；未修改全局 `copy` 行为。
-- Task 4B 已提交 `1b48288`；Python 3.12.14、3.13.16 图族测试各 184 passed，导出/范围/Nature/兼容测试各 40 passed、4 subtests；Python 3.14.7 全量测试 294 passed、22 warnings、6 subtests，最新图族测试 184 passed、22 warnings，兼容回归 1 passed。
-- 测试测量器改用同一 Figure 复制函数，避免辅助代码绕过兼容路径。
-- Python 3.14.7 PNG 烟测保留类别标签和源图，尺寸为 1004×709；几何审查正确返回 `not_auditable`。
-- Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应 `native_only` 类型。
-- 已检查 Python 联系表、代表 PNG、Plotly 联系表和 SVG；未发现明显裁切或重叠。这不代表 52 项自动审查通过。
-- Nature Figure 上游脚本保留 Apache-2.0 许可证副本，复用清单记录上游仓库、固定提交和文件哈希。
-- OMP Figure Skill 的 Task 4B 三个文件保持同步；Task 4A 四个文件已部署且哈希与分支一致。未安装依赖。
-- Python Skill 清单 SHA-256（未变）：`a475e41f833665b05da263c7c11242484cc883eabbf8dc37e3ab34b3e0b81e4b`。Figure 全树旧清单早于兼容补丁和 Task 4A 格式清理。
-- Figure 更新文件：`exporter.py` `4773e8931ec5b0432ade9269fb710b5b252ea50c10940e83c8c781eb147cb7ff`；`dependencies.md` `961ea22b338eb05c923085bfec9cbe17481d6485581146cc64db01745a3b0b84`；`deployment.md` `c84b5b8635446bb779bba14328baa0c9e14d48a589c3af45df7f0f306aa32ce8`。
-- Python Skill 复制目标为 `utils/py-infrastructure`；Figure Skill 复制目标为 `utils/figure-infrastructure`。
-- OMP 与项目 Skills 的文档在统一换行后完全一致，目录与脚本树一致；换行差异来自 CRLF/LF，未安装依赖。
+- 2026-10-22 已核实 GitHub Actions `39718259075`：验证分支 `97dda63` 的 Windows/Ubuntu JavaScript 浏览器测试，以及 Python 3.12/3.13/3.14 的 6 个任务，**8/8 通过**。
+- 已将远端 `main` 从 `79a4048` 安全快进至 `97dda63`，本地主检出 `main` 同步为同一 HEAD。原本地不宜公开的提交历史仅保留在本地分支 `historical-local-main`，没有推送。之后的新文档仅提交本地，不自动发布。
+- 旧 API/便携部署设计已实施：`figure-infrastructure` 由调用项目的 Python/Node 环境管理依赖，无 Skill 自带 `.runtime`；公开 API 文档、已安装的 OMP Skills 和 CI 入口均存在。
+- PDF 解压 16 MiB/流、64 MiB/PDF、每页 1,000,000 次几何比较的资源限制已经实现；Python 3.14 的 Matplotlib 类别计数器深拷贝兼容处理已完成，已有回归测试。
+- 待用户审阅的下一阶段是 **Plotly 实时布局 API**。其设计/计划位于 `docs/superpowers/specs/2026-10-22-plotly-live-layout-design.md` 和 `docs/superpowers/plans/2026-10-22-plotly-live-layout.md`。目前没有实施该接口。
+- 已完成或被后续方案替代的 2026-10-19/10-22 四份设计与计划从工作树清理；历史仍在 Git 中，不另备份。
 
 ## 下一步
 
-- 通过受控 Linux CI 验证几何测试修复和完整 8 个 job；当前没有可用 WSL 或 Docker。
-- CI 全绿后，按获准的干净快照更新远端并复核发布条件；不改写 `main` 历史。
-- 下一阶段建议先设计 52 项 `native_only` 的审查覆盖；不写设计稿或改代码，待用户选择。
+1. 用户审阅 Plotly 实时布局的设计和实施计划；获批后才实施，限定 `figure-infrastructure` 内部。
+2. 实施时按计划 TDD：共享布局引擎、实时接口、已有标注保护、并发控制、真实浏览器和视觉回归；更新 `SKILL.md`、JS API 文档、能力矩阵。
+3. 单独评估 Python `native_only` 审查覆盖与正式 `v0.1.0` 标签；不混入本轮实时布局。
 
 ## 用户约束
 
-- 每个 Skill 的程序实现只放在该 Skill 自己的 `scripts/`。
-- 不改全局开发环境。本次开发依赖只装在系统 Temp 工作树；OMP Skills 目录不安装依赖。实际使用项目管理自身的 Python/Node 依赖。
-- 任务工作树、测试产物、截图、图表和临时脚本放系统 Temp，不放 `files` 目录。
-- 测试源码放根目录 `tests/`，不放进可分发的 `skills/`。
-- 原始 ADC 数据、历史报告和其他科研项目文件只读。
-- 公开内容发布前检查完整 Git 历史、个人路径、凭据、第三方许可和 Notice。
-- 视觉检查必须读取实际导出图片。不得只凭测试声称排版通过。
-- 无法审查的图形必须标记 `not_auditable`，不能报告为零冲突或通过。
-- 不为通过审查而篡改固定物理范围、固定色标、真实数据或必需标签。
-- 用户已授权创建 `inoceanlee/my-sci-skills` 公开仓库并同步本地 `main`；不得覆盖远端独有提交。
-- 用户要求本任务先同步开发分支与 OMP 安装；不必等待后续安全补丁全部完成才部署。
+- 仅改本项目，尤其本轮**不接入任何雷达工程**，不触碰采集数据、实验输出或其他科研项目。
+- Skill 程序实现只在各自 `scripts/`；测试在仓库根 `tests/`。除非独立批准，不增加全局工具、Skill 私有运行时或新的 JS 依赖。
+- 开发使用系统 Temp 工作树及项目隔离环境；不得修改用户全局 Python/Node 环境；本机 OMP 的现有 Skill 文件只能在获明确部署授权后同步。
+- 提交/推送前检查敏感数据、本机路径、许可证、Git 历史和 CI；不强推、不改写公开主线，不能重新发布保存在本地历史分支中的敏感提交。
+- 新功能必须有失败测试、完整旧回归和真实图片视觉检查；`not_auditable` 不能算几何审查通过。默认科研单主图；必需标注、人工范围、固定色标、原始数据和图例不可悄悄删改。
+- API 文档面向普通 Agent：先读 `SKILL.md` 和对应 `references`，普通使用不阅读实现源代码。新的设计/计划均须用户区简洁、Agent 区明确文件树、阶段 Skills、测试、回滚；实施另行审批。
 
 ## 关键决策
 
-### 分发与运行时
+### API 与分发
 
-- Skill 分发目录只包含运行代码、许可证和说明。Python/JavaScript 依赖由调用方已有项目环境管理。
-- Figure Skill 提供 `pyproject.toml` 供目标项目安装 Python 包；JavaScript 使用目标项目安装的 Plotly.js。
-- Skill 不含私有安装器、专用锁文件或 `.runtime/`。
-- Python 项目基础设施仅依赖 Python 标准库。
-- 每个可独立复制的 Skill 保留 MIT 许可证；Nature Figure 上游代码保留 Apache-2.0。
-- `.gitattributes` 中的 `LICENSE -text` 固定 Windows 与 Unix 检出许可证字节。
-- `playwright-core` 仅供仓库开发测试，不属于 Skill 运行依赖。
-- 干净的 `skills/` 目录目标小于或等于 2 MiB。
-- OMP 安装位置为 `~/.omp/agent/skills/py-infrastructure` 和 `~/.omp/agent/skills/figure-infrastructure`；用户授权更新这两份目录。
+- `py-infrastructure` 使用标准库；`figure-infrastructure` Python 使用 Matplotlib/Seaborn，JS 使用 Plotly.js 4.1.2。项目自己安装依赖。
+- 当前公开导出入口：`FigureExporter().export(fig,path)`（Python），`exportScientificFigure(plotDiv,options)`（JS）；JS 当前尚无 `layoutScientificFigure`。
+- 现有五个 JS 文件的加载顺序是 `ranges.js→layout.js→annotations.js→audit.js→figure-layout.js`，新设计保持这个顺序；新增共享内核在 `figure-layout.js` 内，不创建第六个入口脚本。
+- Matplotlib 和 JS 使用独立实现，但共享科研图的物理测量与审查契约。单栏 `1004×709`、双栏 `2126×1241`，绘图导出 `300 DPI`；Python PNG/SVG/PDF，Plotly PNG/SVG（PDF 不支持）。
 
-### 绘图库与布局
+### 布局和审查
 
-- Python 和 JavaScript 适配器分别使用 Matplotlib/Seaborn 与 Plotly.js。
-- 优先复用绘图库原生布局、绘制、渲染器和标注组件。
-- Python 最终导出门槛位于 `FigureExporter`。Plotly 门槛位于 `ScientificFigureExporter`。
-- `preserve` 保留手工布局并继续审查。`compact` 只修复可测冲突和多余留白。
-- 几何约束使用 3 pt 轴标题净空、4 pt 图例或色条净空、6 pt 画布边界净空；净空是实测下限，不重复叠加为 padding。
-- 单栏图幅固定为 1004×709 px。双栏图幅固定为 2126×1241 px。
-- 用户给出的数值范围、最小跨度和固定颜色范围优先于自动缩放。
-- Python 支持 PNG、SVG 和 PDF。Plotly PDF 返回明确的不支持状态。
-- 能力声明以 `skills/figure-infrastructure/references/capability-matrix.md` 为准。
+- `PlotlyLayoutPlanner` 生成不超过 5 个候选；`PlotlyAnnotationPlacer` 负责引导线标注；`PlotlyGeometryAuditor` 测量碰撞、裁切与间距。新增实时入口必须复用这些算法、不要复制另一套避让逻辑。
+- 网页实时测量使用浏览器 CSS 像素及 `96 DPI`；论文导出保持原 `300 DPI`；保证标题/坐标间距 ≥3pt、图例和色条净空 ≥4pt、画布边界净空 ≥6pt。
+- `layoutScientificFigure` 建议默认 `preserveViewport:true`、`layoutPolicy.scope:"full"`；`"annotations"` 仅更新受管且可见的标注；人工已有标注作为避让障碍，不覆盖。
+- 实时优化在离屏图完成，校验源图未更新后仅通过最小 `Plotly.relayout` patch 提交；相同图的异步请求排队，旧请求可被新请求取消/拒绝，避免覆盖新的视野和数据。
+- JS SVG 审查已有资源边界（文本收集 ≤128，可记录冲突 ≤1,024），曲线路径、剪切变换等不可完整审查返回 `not_auditable`。Python image/collection/patch 等 `native_only` 图族未覆盖完整自动几何审查。
 
-### 几何审查与 PDF 预算
+### 发布和维护
 
-- Python 审查器使用 Matplotlib Renderer 测量文字、图例、色条和数据线；不可见文字不纳入几何。
-- Python `Line2D` 审查包含描边半宽和默认标记外接范围；marker-only 图形审查可见标记范围。
-- Python 支持 `markevery=1` 全点标记审查。稀疏或无法枚举的 `markevery` 返回 `not_auditable`。
-- Python 只审查最多 100,000 个可见路径顶点。超限时，审计器在自身 `canvas.draw()` 前返回 `not_auditable`；此限制不保护布局优化器的前置绘制。
-- Matplotlib `Line2D.get_path()` 会展开 `steps-pre`、`steps-mid` 和 `steps-post` 阶梯路径。
-- Python 的 image、collection、patch 等未支持数据对象返回 `not_auditable`。
-- Plotly 最多收集 128 个可见非空 SVG 文本；使用 `TreeWalker` 增量遍历，并检查祖先的显示、可见性和透明度。
-- Plotly 文本碰撞记录最多保存 1,024 条；超限后停止后续文本检查并返回 `not_auditable`。
-- Plotly SVG 直线路径支持 `M/L/H/V/Z`，包含相对与绝对命令；审计器不会连接分离的 `M` 子路径，且会测量可见描边。
-- 等比旋转或缩放的常规描边按 `getScreenCTM()` 换算；`non-scaling-stroke` 使用屏幕描边宽度。
-- 非等比或剪切变换、曲线路径、可见 `layout.shapes` 返回 `not_auditable`。
-- Nature PDF 流每个最多解码 16 MiB、总计最多 64 MiB；每页几何比较预算为 1,000,000，包含文本轨迹匹配与碰撞比较。超限返回 `not_auditable` 和 `RESOURCE_LIMIT`。
-- Nature PDF 审计遇到未处理流警告时返回 `not_auditable`；PDF 碰撞审计只接受已知 verdict。
-- 代表图族测试不保证所有图表类型或任意用户数据都通过几何检查。
+- 两个 Skill 保留 MIT 许可；Nature Figure 第三方源码保留 Apache-2.0 与上游记录。用户已有 OMP Skill 部署不因编写设计稿而改变。
+- 同步验证通过的仓库 `main` 是设计基线；本次新文档完成后可以本地领先远端一个文档提交，直到用户批准下一次同步。
 
 ## 可复用踩坑
 
-- SVG path 可能包含多个独立的 `M` 子路径。不得把坐标串成一条线。
-- 只测折线中心线会漏掉描边边缘与保护区或图例的接触。
-- 单点 Marker 没有线段，必须单独测量可见标记范围。
-- Matplotlib 每个刻度可有两侧标签。只遍历 `label1` 会漏掉顶部或右侧标签。
-- 超大 Matplotlib 路径须在 Renderer 绘制前检查。
-- SVG `getScreenCTM()` 和 `vector-effect` 会改变有效描边宽度。
-- SVG 文本集合须在应用数量上限前增量处理。
-- Nature PDF 文本检查出现警告时，不得报告通过。
-- Windows 的 `core.autocrlf=true` 会改变许可证字节。重要复制文件须采用明确的 Git 属性。
-- Windows `npm` 可能解析到 `.cmd` shim。Python subprocess 应通过 Node 调用 `npm-cli.js`。
-- Windows shell 复杂调用使用独立 `.ps1` 文件，避免跨 Shell 引号嵌套。
-- `rtk` 命令须显式指定仓库或工作树目录，不能只依赖外层 cwd。
-- Python Skill 复制目标必须与可导入的包路径一致；不能只按目录名字推导 import。
-- Figure 的嵌套复制目录、包元数据位置和安装命令必须在临时目标项目中一并验证。
-- Python 分发集成测试也调用 Node、Playwright 和 Chromium；Python CI job 必须配置这些开发依赖。
+- 同步公开 Git 历史时，只能将已验证且经过安全审查的提交快进到远端 `main`；包含个人路径的历史必须留在独立本地分支，不可 merge 后推送。
+- Matplotlib 3.14 类别计数器不能直接 `deepcopy`；现有 `FigureExporter` 使用兼容副本处理。
+- SVG 有独立 `M` 子路径、marker-only 描边与非等比变换等几何边界；未审查覆盖的情况不能声称 PASS。
+- Plotly 当前标注器遇到已有 `layout.annotations` 抛 `ANNOTATION_EXISTING_UNSUPPORTED`，并覆盖整张标注列表；这是实时扩展要解决的核心缺口。
+- 旧候选导出默认使用制图字号 ≥30px；不适合 390px 实时网页，需区分网页与导出 profile。
+- Windows `core.autocrlf` 可能改变 LICENSE 字节，保留现有 `.gitattributes`；临时测试输出留 Temp。
+- 用 PowerShell 执行项目任务前显式进入目标目录；CI 的 Linux Python Job 所需浏览器必须在 CI runner 中准备，不能误用宿主机环境。
 
 ## 活跃问题
 
-- Plotly 可选标题曾导致顶部净空 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题，不代表问题已解决。
-- Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查；当前报告为 `incomplete`。
-
-## 验证入口
-
-- 根 Python 环境由根 `pyproject.toml` 和 `uv.lock` 管理；根 JavaScript 环境由 `package.json` 和 `package-lock.json` 管理。
-- Python 测试位于 `tests/py-infrastructure/`、`tests/figure-infrastructure/python/` 和 `tests/distribution/`。
-- JavaScript 回归位于 `tests/figure-infrastructure/javascript/`。
-- Python 全量测试：`uv run --project . --locked python -m pytest -q`。
-- JavaScript 全量测试：`npm test`。
-- Python 视觉脚本位于 `tests/figure-infrastructure/visual/verify_outputs.py`，输出放系统 Temp。
-- 本地浏览器测试使用系统 Edge；CI 在 runner Temp 下载 Chromium，不自动下载到用户电脑。
-- 临时视觉输出、浏览器产物和测试脚本不纳入 Git。
+- Plotly 可选标题曾导致顶部画布净空 5.04pt，低于 6pt 门槛；本轮实时布局回归要复现并解决。
+- Python 图族 52 项 `native_only` 审查仍不完整，现有图库状态为 `incomplete`，不代表无法导出；本轮不扩大覆盖。
+- `v0.1.0` 正式发行、正式版本发布前的完整复审未完成；不因本轮旧 CI 全绿而自动打标签。
 
 ## 文件入口
 
-- `AGENTS.md`：实施、隔离环境、测试和发布规则。
-- `docs/superpowers/specs/2026-10-22-my-sci-skills-project-api-design.md`：项目 API、环境和部署设计。
-- `docs/superpowers/plans/2026-10-22-my-sci-skills-project-api.md`：五阶段执行计划。
-- `docs/superpowers/plans/2026-10-19-sci-infrastructure.md`：CI 与正式版本发布门槛。
-- `skills/py-infrastructure/SKILL.md`、`references/api.md`：Python 项目基础设施说明与 API。
-- `skills/figure-infrastructure/SKILL.md`：科研绘图 Skill 操作入口。
-- `skills/figure-infrastructure/references/python-api.md`、`javascript-api.md`：调用 API。
-- `skills/figure-infrastructure/references/dependencies.md`、`deployment.md`：项目依赖和部署说明。
-- `skills/figure-infrastructure/references/capability-matrix.md`：图族支持等级与审查边界。
-- `skills/figure-infrastructure/references/reuse-catalog.md`：上游来源、许可证与补丁哈希。
-- `skills/py-infrastructure/scripts/py-infrastructure/`：Python 基础设施包。
-- `skills/figure-infrastructure/scripts/figure-infrastructure/`：Figure 包配置、Python/JavaScript 实现和 Nature 上游代码。
-- `tests/distribution/test_standalone_skills.py`：独立复制和项目环境验收。
-- `tests/figure-infrastructure/python/test_nature_resource_limits.py`：PDF 资源预算回归。
-- `README.md`、`LICENSE`：项目用途、许可和开发入口。
+- `AGENTS.md`：仓库规则；`CONTEXT.md`：当前状态与后续目标。
+- `docs/superpowers/specs/2026-10-22-plotly-live-layout-design.md`：待审阅设计。
+- `docs/superpowers/plans/2026-10-22-plotly-live-layout.md`：待审阅五任务计划、分阶段 Skills、回滚。
+- `skills/figure-infrastructure/SKILL.md`、`references/javascript-api.md`、`references/capability-matrix.md`：Agent 接口与能力边界。
+- `skills/figure-infrastructure/scripts/figure-infrastructure/javascript/`：五个 JS 实现模块。
+- `tests/figure-infrastructure/javascript/`、`tests/figure-infrastructure/fixtures/gallery.html`：回归与离线浏览器样例。
+- `tests/figure-infrastructure/visual/verify_outputs.py`：科研图实际导出与视觉验收。
 
 ---
 _最后核对：2026-10-22_

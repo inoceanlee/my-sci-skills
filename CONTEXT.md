@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- 主线基线为 `main=6f7f268`。三级 API 设计和计划经用户更新后，已授权执行。
+- Task 6 已提交在 `figure-three-level-api`；本地快进合并待主工作树可安全更新后执行。
 - 工作位于系统 Temp 独立工作树的 `figure-three-level-api` 分支。旧 `plotly-live-layout` 工作树保持原样。
 - Task 1（Python L1）完成，提交 `713a3d6`：`ScientificFigure.from_matplotlib()` 接收 Figure/Axes，操作副本；`audit()` 返回结构化结果。
 - Task 2（Python L2）完成，提交 `ded3b75`：受管布局、标注所有权、源图隔离、scope 限制、越界跳过恢复和失败候选清理。
@@ -24,8 +24,7 @@
 
 ## 下一步
 
-1. 完成 Task 6 提交并将分支快进合并到本地 `main`。
-2. 更新上下文记录最终主线状态；保留旧 `plotly-live-layout` 工作树。
+1. 将 `figure-three-level-api` 快进合并到本地 `main`。主工作树当前在 `gallery.html` 和 `browser.test.js` 有未提交改动，需保留。
 
 ## 用户约束
 

@@ -13,7 +13,7 @@
 - Python 全量基线 294 tests、6 subtests 通过；JavaScript 基线 71/71 通过。以上是本轮开始时基线，不代表后续任务已验证。
 - 旧 `plotly-live-layout` 工作树含未提交实验文件，必须保留，不修改、不合并、不删除。
 - Task 3（JavaScript L1）已完成并提交 `0bdc590`；JavaScript 全量回归 73/73 通过，独立审查无问题。
-- Task 4（JavaScript L2）实现和独立审查已通过：离屏布局、托管标注身份恢复、视图/版本保护、逐句柄取消、回滚和 96 DPI 屏幕配置；`rtk npm test` 87/87 通过，390px 与 1280px 浏览器截图已目视检查。提交待完成。
+- Task 4（JavaScript L2）已完成并提交 `8b57fcd`：离屏布局、托管标注身份恢复、视图/版本保护、逐句柄取消、回滚和 96 DPI 屏幕配置；`rtk npm test` 87/87 通过，390px 与 1280px 浏览器截图已目视检查，独立复审无问题。
 
 ## 下一步
 

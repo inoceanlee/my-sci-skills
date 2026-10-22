@@ -20,25 +20,23 @@
 
 - Python：311 项测试及 6 个子测试通过。
 - JavaScript：90/90 测试通过，包含浏览器行为测试。
-- GitHub Actions 运行 `39790860496`：提交 `1744267` 上的 8/8 个任务成功（Windows、Ubuntu、Python 3.12–3.14 与 JavaScript 浏览器测试）。
+- GitHub Actions 运行 `39803240431`：发布提交 `8f28441` 上的 8/8 个任务成功（Windows、Ubuntu、Python 3.12–3.14 与 JavaScript 浏览器测试）。
 - 已运行独立分发测试：从 `skills/` 复制 Skill，在使用项目环境中实际执行 Python 和 Plotly 导出。
 - 真实 PNG/SVG/PDF 及代表性画廊图已检查；有些图形的几何审查不完整，不能以导出成功替代完整视觉验收。
 - OMP 安装的 Figure Skill 与仓库 `skills/figure-infrastructure/` 一致：排除缓存后均为 29 个文件，文件名和 SHA-256 校验值一致（2026-10-22）。
 
 ### Git 与发布
 
-- 截至 2026-10-22，本地 `main` 与 GitHub `main` 已同步，未发现预先存在的未提交修改。
-- 先前关于未提交空白、未推送和临时工作树的描述属于历史，已不再是当前任务。
+- 截至 2026-10-22，本地仓库和 GitHub 的 `main` 已同步。正式版本标签指向 `8f28441be2f575a76b64b7579579b316e868b549`。
 - `skills/figure-infrastructure/scripts/figure-infrastructure/pyproject.toml` 已声明 `version = "0.1.0"`；根项目的 `pyproject.toml` 也声明开发项目版本 `0.1.0`。
-- 尚未创建正式 Git 版本标签或 GitHub Release；具有包版本号不等于已经发布。
+- `figure-infrastructure` 已正式发布 `v0.1.0`：Git 标签 `figure-infrastructure-v0.1.0`，GitHub Release 为 `https://github.com/inoceanlee/my-sci-skills/releases/tag/figure-infrastructure-v0.1.0`。
 - 公开仓库的 CI 已存在；根目录 `package.json` 属于私有开发包，不是 npm 发行包。
-- 本轮仅获准更新 `CONTEXT.md` 并同步 GitHub，不代表授权创建 Release、标签、安装包或执行发布方案。
+- Release 提供 `figure-infrastructure-v0.1.0.zip`（29 个 Git 跟踪文件）及同名 `.sha256` 校验文件；下载后与本地验证包的 SHA-256 一致：`cefe83da6f8bcd7f85adb4b2df55286a99b62230a7bc8218f2d816c4de044c11`。
 
 ## 下一步
 
-1. 用户恢复发布规划时，先讨论 `figure-infrastructure` 的首版分发设计；GitHub Release、独立 Skill ZIP 和校验文件是候选方案，尚未批准为实施设计。
-2. 设计获批后按 Superpowers 流程形成设计稿与实施计划，明确发布包内容、跨项目安装验收、版本策略、验证和回滚。
-3. 实施发布任务必须单独取得授权，按最终提交验证 CI、许可、分发包及本机 OMP 安装一致性。
+1. 让后续消费项目通过已发布的 Figure Skill 版本使用三级 API，按实际使用反馈收集可复现的通用问题。
+2. 有实际修复或新增通用能力时，再单独规划对应版本；遵循现有 GitHub Release、CI 与下载包验证方式。
 
 ## 用户约束
 
@@ -97,7 +95,7 @@
 - Plotly 在使用项目已有的浏览器和 Node/npm 环境运行，脚本需按公开文档中的顺序加载。
 - 第一方源码采用 MIT；Nature Figure 第三方代码保留 Apache-2.0 许可、上游归属及固定来源信息。
 - 根目录的测试、锁文件、`.venv` 和 `node_modules` 不属于独立 Skill 运行包。
-- 首版发布方式仍在讨论；版本标签命名、Release 附件和发布自动化尚未形成已批准设计。
+- Figure Skill 独立发布：`figure-infrastructure-v0.1.0` 标签固定源码提交，GitHub Release 附独立 Skill ZIP 和 SHA-256 文件。`py-infrastructure` 独立维护，不共用 Figure 版本号。
 
 ## 可复用踩坑
 
@@ -113,7 +111,6 @@
 ## 活跃问题
 
 - `native_only` 图形有 52 个示例返回 `not_auditable`，属于已知审查覆盖边界；目前不作为下一阶段优先事项。
-- `figure-infrastructure` 的正式 v0.1.0 Release 尚未创建；发布设计、分发包和版本流程待后续讨论。
 
 ## 文件入口
 
@@ -127,6 +124,7 @@
 - `skills/figure-infrastructure/scripts/figure-infrastructure/`：Python/JavaScript 实现。
 - `tests/figure-infrastructure/`：行为和视觉测试；`tests/distribution/`：独立复制部署测试。
 - `.github/workflows/checks.yml`：CI 检查。
+- `https://github.com/inoceanlee/my-sci-skills/releases/tag/figure-infrastructure-v0.1.0`：已发布的 Figure Skill 安装包和发行说明。
 - OMP 安装入口为 `~/.omp/agent/skills/figure-infrastructure/`；以当前仓库 Skill 目录为源。
 
 ---

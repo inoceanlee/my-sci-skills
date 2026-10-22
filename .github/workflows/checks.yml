@@ -1,0 +1,78 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+
+      - name: Install project dependencies
+        run: uv sync --locked
+
+      - name: Run Python tests
+        run: uv run --project . --locked python -m pytest -q
+
+  javascript:
+    name: JavaScript browser tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install Chromium and system dependencies
+        if: runner.os == 'Linux'
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+
+      - name: Install Chromium
+        if: runner.os == 'Windows'
+        run: node node_modules/playwright-core/cli.js install chromium
+
+      - name: Set browser executable
+        if: runner.os == 'Linux'
+        run: |
+          node -e 'require("node:fs").appendFileSync(process.env.GITHUB_ENV, `SCI_TEST_BROWSER=${require("playwright-core").chromium.executablePath()}\n`)'
+
+      - name: Set browser executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $browser = node -p 'require("playwright-core").chromium.executablePath()'
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "SCI_TEST_BROWSER=$browser`n", [Text.UTF8Encoding]::new($false))
+
+      - name: Run JavaScript browser tests
+        run: npm test

@@ -29,6 +29,7 @@ from typing import Any, Iterable, Sequence
 Rect = tuple[float, float, float, float]
 Point = tuple[float, float]
 Segment = tuple[Point, Point]
+MAX_GEOMETRY_COMPARISONS = 1_000_000
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,8 @@ class PageGeometry:
     strokes: list[StrokePath] = field(default_factory=list)
     fills: list[FilledRegion] = field(default_factory=list)
     images: list[FilledRegion] = field(default_factory=list)
+    resource_limit: bool = False
+    extraction_comparisons: int = 0
 
 
 @dataclass(frozen=True)
@@ -265,22 +268,29 @@ def extract_pdf_geometry(path: Path) -> list[PageGeometry]:
                 text = _text_from_chars(trace.get("chars", ()))
                 if not text:
                     continue
-                trace_rows.append(
-                    TraceBox(index=trace_index, text=text, bbox=normalize_rect(trace["bbox"]))
-                )
+                trace_rows.append(TraceBox(index=trace_index, text=text, bbox=normalize_rect(trace["bbox"])))
             geometry.traces.extend(trace_rows)
 
             text_dict = page.get_text("dict")
-            text_index = 0
-            used_trace_indexes: set[int] = set()
+            text_groups = []
             for block in text_dict.get("blocks", []):
                 if block.get("type") != 0:
                     continue
                 for line in block.get("lines", []):
                     spans = [span for span in line.get("spans", []) if span.get("text", "").strip()]
-                    if not spans:
-                        continue
-                    loose_bbox = union_rects(normalize_rect(span["bbox"]) for span in spans)
+                    if spans:
+                        text_groups.append(spans)
+
+            geometry.extraction_comparisons = len(text_groups) * len(trace_rows)
+            if geometry.extraction_comparisons > MAX_GEOMETRY_COMPARISONS:
+                geometry.resource_limit = True
+            else:
+                text_index = 0
+                used_trace_indexes: set[int] = set()
+                for spans in text_groups:
+                    loose_bbox = union_rects(
+                        normalize_rect(span["bbox"]) for span in spans
+                    )
                     if loose_bbox is None:
                         continue
                     matched_traces = [
@@ -295,15 +305,15 @@ def extract_pdf_geometry(path: Path) -> list[PageGeometry]:
                     geometry.texts.append(TextBox(index=text_index, text=text, bbox=bbox))
                     text_index += 1
 
-            for trace in trace_rows:
-                if trace.index in used_trace_indexes:
-                    continue
-                if rect_intersection(trace.bbox, geometry.bbox) is None:
-                    continue
-                geometry.texts.append(
-                    TextBox(index=text_index, text=trace.text, bbox=trace.bbox)
-                )
-                text_index += 1
+                for trace in trace_rows:
+                    if trace.index in used_trace_indexes:
+                        continue
+                    if rect_intersection(trace.bbox, geometry.bbox) is None:
+                        continue
+                    geometry.texts.append(
+                        TextBox(index=text_index, text=trace.text, bbox=trace.bbox)
+                    )
+                    text_index += 1
 
             for drawing_index, drawing in enumerate(page.get_drawings()):
                 drawing_type = str(drawing.get("type", ""))
@@ -331,9 +341,7 @@ def extract_pdf_geometry(path: Path) -> list[PageGeometry]:
                                 )
                             )
                     else:
-                        geometry.fills.append(
-                            FilledRegion(index=drawing_index, bbox=drawing_bbox, source="fill")
-                        )
+                        geometry.fills.append(FilledRegion(index=drawing_index, bbox=drawing_bbox, source="fill"))
 
             image_index = 0
             seen_images: set[tuple[int, int, int, int]] = set()
@@ -381,6 +389,16 @@ def audit_page_geometry(
 ) -> tuple[list[CollisionFinding], dict[str, int]]:
     findings: list[CollisionFinding] = []
     info = {"contained_fill_overlays": 0, "contained_image_overlays": 0}
+    if page.resource_limit:
+        return [], info
+    text_count = len(page.texts)
+    comparisons = text_count * (text_count - 1) // 2 + text_count * (
+        len(page.strokes) + len(page.fills) + len(page.images)
+    )
+    remaining_comparisons = MAX_GEOMETRY_COMPARISONS - page.extraction_comparisons
+    if comparisons > remaining_comparisons:
+        page.resource_limit = True
+        return [], info
 
     for first, second in combinations(page.texts, 2):
         ratio = rect_overlap_ratio(first.bbox, second.bbox)
@@ -509,7 +527,8 @@ def audit_geometries(
     warn_count = sum(finding.severity == "WARN" for finding in findings)
     visible_text_count = sum(len(page.texts) for page in pages)
     trace_count = sum(len(page.traces) for page in pages)
-    auditable = visible_text_count > 0 or trace_count > 0
+    resource_limit_pages = [page.page for page in pages if page.resource_limit]
+    auditable = (visible_text_count > 0 or trace_count > 0) and not resource_limit_pages
     verdict = (
         "NOT AUDITABLE"
         if not auditable
@@ -522,6 +541,8 @@ def audit_geometries(
     return {
         "auditable": auditable,
         "verdict": verdict,
+        "issues": ["RESOURCE_LIMIT"] if resource_limit_pages else [],
+        "resource_limit_pages": resource_limit_pages,
         "page_count": len(pages),
         "visible_text_box_count": visible_text_count,
         "text_trace_count": trace_count,
@@ -637,6 +658,8 @@ def render_text(result: dict[str, Any], strict: bool = False) -> str:
             "note: contained overlays can be intentional; WARN findings need final-size visual review",
         ]
     )
+    if result["issues"]:
+        lines.append(f"issues: {', '.join(result['issues'])}")
     if strict and summary["warn"]:
         lines.append("strict verdict: FIX BEFORE DELIVERY (WARN is blocking)")
     return "\n".join(lines)

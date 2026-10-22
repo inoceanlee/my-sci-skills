@@ -2,7 +2,8 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { exportScientificFigure } = require("../../../skills/figure-infrastructure/scripts/javascript/figure-layout.js");
+const figureLayout = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/figure-layout.js");
+const { exportScientificFigure } = figureLayout;
 
 test("PDF export returns an explicit unsupported-format error", async () => {
   await assert.rejects(
@@ -23,4 +24,8 @@ test("multiple independent main axes are rejected", async () => {
 
 test("unknown preset fails without rendering", async () => {
   await assert.rejects(exportScientificFigure({ data: [], layout: {} }, { preset: "poster" }), /UNKNOWN_PRESET/);
+});
+
+test("the documented Plotly export entry point is public", () => {
+  assert.equal(typeof figureLayout.exportScientificFigure, "function");
 });

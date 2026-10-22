@@ -2,28 +2,57 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
-from dataclasses import dataclass, replace
 import os
-from pathlib import Path
 import re
+import sys
 import tempfile
 import warnings
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass, replace
+from itertools import count
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from xml.etree import ElementTree
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+from .annotations import place_annotations
 from .audit import (
-    ExportAudit, GeometryAuditor, GeometryIssue, GeometryResult,
+    ExportAudit,
+    GeometryAuditor,
+    GeometryIssue,
+    GeometryResult,
     LayoutValidationError,
 )
-from .annotations import place_annotations
 from .layout import FigureLayoutOptimizer, LayoutPolicy
 from .nature import audit_nature_pdf
 from .presets import PRESETS, FigurePreset
 from .ranges import RangePolicy, resolve_range
+
+_ITERTOOLS_COUNT_TYPE = type(count())
+
+
+def _deepcopy_figure(fig):
+    """Deep-copy a Figure with categorical counter support on Python 3.14+."""
+    memo = {}
+    if sys.version_info >= (3, 14):
+        # Matplotlib UnitData uses itertools.count for the next category ID.
+        # Rebuild that counter from existing IDs so the copy stays independent.
+        for axes in fig.axes:
+            for axis in (axes.xaxis, axes.yaxis):
+                unit_data = axis.units
+                counter = getattr(unit_data, "_counter", None)
+                mapping = getattr(unit_data, "_mapping", None)
+                if type(counter) is _ITERTOOLS_COUNT_TYPE and isinstance(
+                    mapping, Mapping
+                ):
+                    counter_id = id(counter)
+                    if counter_id not in memo:
+                        next_category = max(mapping.values(), default=-1) + 1
+                        memo[counter_id] = count(next_category)
+    return deepcopy(fig, memo)
 
 
 @dataclass(frozen=True)
@@ -194,7 +223,7 @@ class FigureExporter:
             raise TypeError("layout_policy must be LayoutPolicy")
         annotations = tuple(annotations)
 
-        working = deepcopy(fig)
+        working = _deepcopy_figure(fig)
         duplicate = None
         temporary_output = None
         nature_result = None
@@ -207,7 +236,7 @@ class FigureExporter:
             last_error = None
             auditor = GeometryAuditor()
             for candidate_policy in candidate_policies:
-                candidate = deepcopy(working)
+                candidate = _deepcopy_figure(working)
                 candidate_axes = self._primary_axes(candidate)
                 metrics = None
                 try:

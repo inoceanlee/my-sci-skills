@@ -34,6 +34,8 @@ TOKEN = re.compile(
 NUMBER = re.compile(rb"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?$")
 SHOW_OPERATORS = {b"Tj", b"TJ", b"'", b'"'}
 IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+MAX_STREAM_DECODED_BYTES = 16 * 1024 * 1024
+MAX_TOTAL_DECODED_BYTES = 64 * 1024 * 1024
 
 
 def multiply(first: tuple[float, ...], second: tuple[float, ...]) -> tuple[float, ...]:
@@ -124,6 +126,7 @@ def scan_text_runs(stream: bytes, stream_index: int) -> list[TextRun]:
 def decoded_streams(data: bytes) -> tuple[list[bytes], list[str]]:
     streams: list[bytes] = []
     warnings: list[str] = []
+    total_decoded = 0
     cursor = 0
     stream_number = 0
     while True:
@@ -135,24 +138,49 @@ def decoded_streams(data: bytes) -> tuple[list[bytes], list[str]]:
         if end < 0:
             warnings.append(f"stream {stream_number} has no endstream marker")
             break
-        # Keep the raw stream bytes. zlib accepts PDF's trailing line break,
-        # while stripping could accidentally remove a legitimate compressed
-        # byte that happens to equal CR or LF.
-        payload = data[match.end() : end]
         header = data[max(0, match.start() - 2048) : match.start()]
         dictionary_start = header.rfind(b"<<")
         dictionary = header[dictionary_start:] if dictionary_start >= 0 else header
+        remaining_total = MAX_TOTAL_DECODED_BYTES - total_decoded
         if b"/FlateDecode" in dictionary:
+            stream_limit = min(MAX_STREAM_DECODED_BYTES, remaining_total)
             try:
-                payload = zlib.decompress(payload)
+                decompressor = zlib.decompressobj()
+                payload = decompressor.decompress(
+                    memoryview(data)[match.end() : end], stream_limit + 1
+                )
             except zlib.error as exc:
                 warnings.append(f"stream {stream_number} FlateDecode failed: {exc}")
+                cursor = end + len(b"endstream")
+                continue
+            if (
+                len(payload) > MAX_STREAM_DECODED_BYTES
+                or len(payload) > remaining_total
+                or decompressor.unconsumed_tail
+            ):
+                warnings.append(
+                    f"RESOURCE_LIMIT: stream {stream_number} exceeds decoded-byte limits"
+                )
+                return [], warnings
+            if not decompressor.eof:
+                warnings.append(
+                    f"stream {stream_number} FlateDecode failed: incomplete stream"
+                )
                 cursor = end + len(b"endstream")
                 continue
         elif b"/Filter" in dictionary:
             warnings.append(f"stream {stream_number} uses an unsupported PDF filter")
             cursor = end + len(b"endstream")
             continue
+        else:
+            stream_size = end - match.end()
+            if stream_size > MAX_STREAM_DECODED_BYTES or stream_size > remaining_total:
+                warnings.append(
+                    f"RESOURCE_LIMIT: stream {stream_number} exceeds decoded-byte limits"
+                )
+                return [], warnings
+            payload = data[match.end() : end]
+        total_decoded += len(payload)
         streams.append(payload)
         cursor = end + len(b"endstream")
     return streams, warnings
@@ -160,12 +188,16 @@ def decoded_streams(data: bytes) -> tuple[list[bytes], list[str]]:
 
 def audit_pdf(data: bytes, minimum_pt: float = 5.0) -> dict[str, object]:
     streams, warnings = decoded_streams(data)
+    resource_limited = any(
+        warning.startswith("RESOURCE_LIMIT:") for warning in warnings
+    )
     runs: list[TextRun] = []
     for stream_index, stream in enumerate(streams, 1):
         runs.extend(scan_text_runs(stream, stream_index))
     below = [run for run in runs if run.size_pt < minimum_pt]
     return {
-        "auditable": bool(runs),
+        "auditable": bool(runs) and not resource_limited,
+        "issues": ["RESOURCE_LIMIT"] if resource_limited else [],
         "minimum_required_pt": minimum_pt,
         "minimum_found_pt": min((run.size_pt for run in runs), default=None),
         "text_run_count": len(runs),
@@ -181,8 +213,12 @@ def render_text(path: Path, result: dict[str, object]) -> str:
         f"pdf: {path}",
         f"minimum required: {result['minimum_required_pt']:g} pt",
     ]
-    if not result["auditable"]:
-        lines.append("verdict: NOT AUDITABLE — no supported text-showing operators were found")
+    if result["issues"]:
+        lines.append("verdict: NOT AUDITABLE — RESOURCE_LIMIT")
+    elif not result["auditable"]:
+        lines.append(
+            "verdict: NOT AUDITABLE — no supported text-showing operators were found"
+        )
     else:
         lines.extend(
             [

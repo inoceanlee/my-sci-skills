@@ -273,7 +273,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sci-figure-infrastructure", editable = "skills/figure-infrastructure" }]
+requires-dist = [{ name = "sci-figure-infrastructure", editable = "skills/figure-infrastructure/scripts/figure-infrastructure" }]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8" }]
@@ -524,7 +524,7 @@ wheels = [
 [[package]]
 name = "sci-figure-infrastructure"
 version = "0.1.0"
-source = { editable = "skills/figure-infrastructure" }
+source = { editable = "skills/figure-infrastructure/scripts/figure-infrastructure" }
 dependencies = [
     { name = "matplotlib" },
     { name = "pillow" },

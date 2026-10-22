@@ -5,16 +5,11 @@
 - `py-infrastructure`：提供 Python 路径、日志、异常和性能审计工具。
 - `figure-infrastructure`：提供 Matplotlib、Seaborn 和 Plotly 科研绘图工具。
 
-## 独立分发
+## 使用 Skill
 
-本仓库根目录用于开发。分发时只复制 `skills/` 中需要的 Skill 文件夹。
-根目录中的测试、开发依赖和文档不属于 Skill 运行包。
+只复制 `skills/` 中需要的 Skill 文件夹。代码和说明保存在 Skill 内；运行依赖安装在使用项目已有的 Python 或 Node.js 环境中。
 
-每个 Skill 的入口和调用方式见对应 `SKILL.md`。
-`figure-infrastructure` 的部署细节见 `skills/figure-infrastructure/references/deployment.md`。
-
-`py-infrastructure` 只使用 Python 标准库。
-`figure-infrastructure` 首次运行前，按其 `SKILL.md` 安装私有运行依赖。
+每个 Skill 的调用入口见对应 `SKILL.md`。绘图依赖和后端调用见 `skills/figure-infrastructure/references/`。
 
 ## 开发与验证
 
@@ -27,5 +22,4 @@ uv run --project . --locked python -m pytest -q
 npm test
 ```
 
-测试结果说明各能力的实际覆盖范围。
-支持情况和审查边界见 `skills/figure-infrastructure/references/capability-matrix.md`。
+测试结果说明各能力的实际覆盖范围。支持情况和审查边界见 `skills/figure-infrastructure/references/capability-matrix.md`。

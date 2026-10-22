@@ -1,9 +1,0 @@
-{
-  "name": "sci-figure-infrastructure",
-  "version": "0.1.0",
-  "private": true,
-  "type": "commonjs",
-  "dependencies": {
-    "plotly.js-dist-min": "4.1.2"
-  }
-}

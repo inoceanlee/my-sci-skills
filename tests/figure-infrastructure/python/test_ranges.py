@@ -6,7 +6,17 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "skills" / "figure-infrastructure" / "scripts" / "python"))
+sys.path.insert(
+    0,
+    str(
+        Path(__file__).resolve().parents[3]
+        / "skills"
+        / "figure-infrastructure"
+        / "scripts"
+        / "figure-infrastructure"
+        / "python"
+    ),
+)
 
 from figure_layout import PRESETS, RangePolicy, resolve_range
 
@@ -25,8 +35,13 @@ class RangeTests(unittest.TestCase):
         self.assertGreaterEqual(hi, 100.002)
 
     def test_explicit_fixed_and_reference(self):
-        self.assertEqual(resolve_range([100], RangePolicy(mode="fixed", bounds=(0, 1))), (0, 1))
-        self.assertEqual(resolve_range([0.1], RangePolicy(mode="reference", bounds=(-10, 10))), (-10, 10))
+        self.assertEqual(
+            resolve_range([100], RangePolicy(mode="fixed", bounds=(0, 1))), (0, 1)
+        )
+        self.assertEqual(
+            resolve_range([0.1], RangePolicy(mode="reference", bounds=(-10, 10))),
+            (-10, 10),
+        )
 
     def test_malformed_policy_rejected(self):
         with self.assertRaises(ValueError):
@@ -50,31 +65,62 @@ class RangeTests(unittest.TestCase):
         self.assertGreater(lo, 0)
 
     def test_presets_fixed(self):
-        self.assertEqual((PRESETS.single.width_px, PRESETS.single.height_px), (1004, 709))
-        self.assertEqual((PRESETS.double.width_px, PRESETS.double.height_px), (2126, 1241))
+        self.assertEqual(
+            (PRESETS.single.width_px, PRESETS.single.height_px), (1004, 709)
+        )
+        self.assertEqual(
+            (PRESETS.double.width_px, PRESETS.double.height_px), (2126, 1241)
+        )
         self.assertEqual(PRESETS.single.dpi, 300)
 
     def test_skill_source_resolves_from_repository_root_after_migration(self):
         repository_root = Path(__file__).resolve().parents[3]
-        skill_source = repository_root / "skills" / "figure-infrastructure" / "scripts" / "python"
+        skill_source = (
+            repository_root
+            / "skills"
+            / "figure-infrastructure"
+            / "scripts"
+            / "figure-infrastructure"
+            / "python"
+        )
         self.assertTrue((skill_source / "figure_layout" / "__init__.py").is_file())
 
     def test_root_development_manifests_exist(self):
         repository_root = Path(__file__).resolve().parents[3]
-        for manifest in ("pyproject.toml", "uv.lock", "package.json", "package-lock.json"):
+        for manifest in (
+            "pyproject.toml",
+            "uv.lock",
+            "package.json",
+            "package-lock.json",
+        ):
             with self.subTest(manifest=manifest):
                 self.assertTrue((repository_root / manifest).is_file())
 
     def test_root_environment_imports_skill_source_editably(self):
         repository_root = Path(__file__).resolve().parents[3]
         result = subprocess.run(
-            [sys.executable, "-c", "import figure_layout; print(figure_layout.__file__)"],
+            [
+                sys.executable,
+                "-c",
+                "import figure_layout; print(figure_layout.__file__)",
+            ],
             cwd=repository_root,
             check=True,
             capture_output=True,
             text=True,
         )
-        expected = repository_root / "skills" / "figure-infrastructure" / "scripts" / "python" / "figure_layout" / "__init__.py"
+        expected = (
+            repository_root
+            / "skills"
+            / "figure-infrastructure"
+            / "scripts"
+            / "figure-infrastructure"
+            / "python"
+            / "figure_layout"
+            / "__init__.py"
+        )
         self.assertEqual(Path(result.stdout.strip()).resolve(), expected.resolve())
+
+
 if __name__ == "__main__":
     unittest.main()

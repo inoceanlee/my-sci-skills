@@ -3,7 +3,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { resolveRange, PRESETS } = require("../../../skills/figure-infrastructure/scripts/javascript/ranges.js");
+const { resolveRange, PRESETS } = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/ranges.js");
 
 test("auto tightens while retaining finite data", () => {
   const [lo, hi] = resolveRange([12, 14], { mode: "auto" });
@@ -52,9 +52,9 @@ test("offline gallery resolves after test migration", () => {
   );
 
   const html = fs.readFileSync(galleryPath, "utf8");
-  const scriptPaths = [...html.matchAll(/<script src="([^"]+)"/g)]
+  const scriptPaths = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
     .map((match) => match[1])
-    .filter((src) => src.includes("scripts/javascript/"));
+    .filter((src) => src.includes("scripts/figure-infrastructure/javascript/"));
   assert.equal(scriptPaths.length, 5);
   for (const src of scriptPaths) {
     assert.ok(fs.existsSync(path.resolve(path.dirname(galleryPath), src)), src);

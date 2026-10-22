@@ -9,7 +9,7 @@ package = false
 python-downloads = "manual"
 
 [tool.uv.sources]
-sci-figure-infrastructure = { path = "skills/figure-infrastructure", editable = true }
+sci-figure-infrastructure = { path = "skills/figure-infrastructure/scripts/figure-infrastructure", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8"]

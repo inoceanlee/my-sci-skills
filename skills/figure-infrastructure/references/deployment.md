@@ -1,94 +1,69 @@
-# 独立部署
+# 项目环境部署
 
-本页说明如何复制、安装和调用 `figure-infrastructure`。安装前复制整个 Skill 目录。不要在安装后移动 Skill。
+本页说明如何在目标项目已有环境中调用 `figure-infrastructure`。Skill 源目录只保存代码、许可和文档。Python 和 JavaScript 依赖都由目标项目管理。
 
 ## 前置条件
 
-- Python 版本符合 `pyproject.toml` 的 `>=3.12,<3.15` 范围。
-- `uv`、Node.js 和 npm 已在 `PATH` 中。
-- 安装依赖时可以访问 Python 和 npm 软件源。
-- `py-infrastructure` 只依赖 Python 标准库，无需单独安装运行时。
+- Python 后端：目标项目已有 Python `>=3.12,<3.15` 和项目环境管理器。
+- Plotly 后端：目标项目已有 Node.js、npm 和浏览器页面。
+- 仅安装实际使用的后端依赖。
 
-安装器不会下载 Python，也不会修改系统级 Python、npm 或 Node.js。它只在 `figure-infrastructure/.runtime/` 创建虚拟环境、Node 模块和缓存。`playwright-core` 只用于仓库测试，不属于 Skill 运行依赖。`.venv/` 和 `node_modules/` 不随 Skill 源文件分发。
+Python 3.14.7 与 Matplotlib 3.11.2 已通过全量测试。目标项目应使用自身锁文件中的依赖版本。
 
-## Windows 安装
+## 安装 Python 包
 
-在项目根目录运行 PowerShell 命令。先检查，再安装，再检查一次。
+将 `scripts/figure-infrastructure/` 整包复制到目标项目的 `utils/figure-infrastructure/`，并从复制后的包目录安装：
 
-```powershell
-py -3.12 .\skills\figure-infrastructure\scripts\setup\bootstrap.py check
-py -3.12 .\skills\figure-infrastructure\scripts\setup\bootstrap.py install
-py -3.12 .\skills\figure-infrastructure\scripts\setup\bootstrap.py check
+```text
+uv pip install --python <PROJECT_PYTHON> --editable <PROJECT_ROOT>/utils/figure-infrastructure
 ```
 
-可用 `--component python` 或 `--component javascript` 只安装一个后端。运行 Python 脚本时使用 Skill 私有解释器：
+替换 `<PROJECT_PYTHON>` 和 `<PROJECT_ROOT>`。命令会把包与依赖安装到目标项目环境，不会在 Skill 目录创建环境。
 
-```powershell
-& .\skills\figure-infrastructure\.runtime\python\.venv\Scripts\python.exe .\analysis.py
-```
+使用其他项目管理器时，明确指定项目解释器，并从 `utils/figure-infrastructure/` 安装。移动目录后重新安装 editable 包。共享项目清单和锁文件不得保存个人绝对路径。
 
-## Unix 安装
-
-在项目根目录运行 POSIX Shell 命令。先检查，再安装，再检查一次。
-
-```sh
-python3.12 skills/figure-infrastructure/scripts/setup/bootstrap.py check
-python3.12 skills/figure-infrastructure/scripts/setup/bootstrap.py install
-python3.12 skills/figure-infrastructure/scripts/setup/bootstrap.py check
-```
-
-可用 `--component python` 或 `--component javascript` 只安装一个后端。运行 Python 脚本时使用 Skill 私有解释器：
-
-```sh
-skills/figure-infrastructure/.runtime/python/.venv/bin/python analysis.py
-```
-
-`check` 对所选组件可用时返回 `0`。命令输入无效时返回 `1`。运行时缺失或无效、路径错误或安装验证失败时返回 `2`。`check` 不创建运行目录。若 `install` 失败，确认前置命令可用、Python 版本符合范围且网络可访问，再重跑安装器。不要手动把运行时移出 Skill 目录。
-
-## Python 调用
-
-安装器把 `figure_layout` 安装到 `.runtime/python/.venv`，源码仍位于 Skill 的 `scripts/python/figure_layout/`。用上述私有解释器运行代码。
+在项目环境运行 Python：
 
 ```python
 from figure_layout import FigureExporter
-from figure_layout.layout import LayoutPolicy
 
-result = FigureExporter().export(
-    fig,
-    "figure.svg",
-    kind="line",
-    preset="double",
-    layout_policy=LayoutPolicy(mode="compact"),
-)
+result = FigureExporter().export(fig, "figure.png")
 ```
 
-Matplotlib/Seaborn 支持 PNG、SVG 和 PDF。查看[能力矩阵](capability-matrix.md)，确认图形类型与审计覆盖范围。
+参数、格式、返回字段和错误见[Python API](python-api.md)。
 
-## 浏览器 JavaScript 调用
+## 安装 Plotly.js
 
-浏览器页面按以下顺序同步加载脚本。将示例路径替换为应用实际的 Skill 路径。
+在目标项目根目录安装 Plotly：
+
+```text
+npm install plotly.js-dist-min@4.1.2
+```
+
+此命令只修改目标项目的 `package.json` 和锁文件。浏览器先加载项目的 Plotly 包，再按 [`javascript-api.md`](javascript-api.md) 加载 Skill 的脚本。
 
 ```html
-<script src="skills/figure-infrastructure/.runtime/javascript/node_modules/plotly.js-dist-min/plotly.min.js"></script>
-<script src="skills/figure-infrastructure/scripts/javascript/ranges.js"></script>
-<script src="skills/figure-infrastructure/scripts/javascript/layout.js"></script>
-<script src="skills/figure-infrastructure/scripts/javascript/annotations.js"></script>
-<script src="skills/figure-infrastructure/scripts/javascript/audit.js"></script>
-<script src="skills/figure-infrastructure/scripts/javascript/figure-layout.js"></script>
+<script src="./node_modules/plotly.js-dist-min/plotly.min.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/ranges.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/layout.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/annotations.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/audit.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/figure-layout.js"></script>
 ```
 
-不要为这些脚本设置 `async`。应用代码应在所有脚本加载后运行。页面需先用 Plotly.js 绘制图形，再调用导出入口：
+不要给脚本标签添加 `async`。页面需要先绘制 Plotly 图形，再调用 `exportScientificFigure`。
 
 ```javascript
-const result = await exportScientificFigure(document.querySelector("#plot"), {
-  format: "svg",
-  preset: "single",
-  layoutPolicy: { mode: "compact" },
-});
-
-console.log(result.audit.geometryStatus, result.audit.issues);
+const result = await exportScientificFigure(
+  document.querySelector("#plot"),
+  { format: "svg", preset: "single" }
+);
 ```
 
-Plotly.js 支持 PNG 和 SVG。`preserve` 保留手动版面，`compact` 尝试调整版面。两种模式都会运行几何审计。结果中的 `not_auditable` 表示至少一种必需几何角色未完整审查，不表示通过。
+页面需要浏览器 DOM。Node.js 服务端不能直接导出浏览器图。检查 `result.audit.geometryStatus`；`not_auditable` 不等于通过。
 
-查看[能力矩阵](capability-matrix.md)了解各图形的审计边界。查看[上游复用清单](reuse-catalog.md)了解第三方来源与许可证。
+## 更新源文件
+
+如果目标项目已安装非 editable 副本，源文件变更后重新安装到目标项目环境。目标项目的环境管理器负责跟踪依赖和源码。
+
+详细依赖范围见[项目环境依赖](dependencies.md)。图形支持边界见[能力矩阵](capability-matrix.md)。

@@ -40,6 +40,10 @@ test("offline PNG and SVG export preserves source Plotly state", async () => {
     });
     assert.equal(data.before, data.after);
     assert.equal(data.remaining, 0);
+    assert.equal(data.png.format, "png");
+    assert.equal(data.png.preset, "single");
+    assert.equal(data.svg.format, "svg");
+    assert.equal(data.svg.preset, "double");
     assert.equal(data.png.audit.geometryStatus, "passed");
     assert.equal(data.png.audit.passed, true);
     assert.equal(data.png.audit.layoutMetrics.collisionCount, 0);

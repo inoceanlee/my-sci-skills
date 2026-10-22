@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[2] / "skills" / "py-infrastructure"
-SOURCE = SKILL_ROOT / "scripts" / "infrastructure"
+SOURCE = SKILL_ROOT / "scripts" / "py-infrastructure"
 
 
 class InfrastructureContractTest(unittest.TestCase):
@@ -23,12 +23,13 @@ class InfrastructureContractTest(unittest.TestCase):
             utils = root / "utils"
             utils.mkdir()
             (utils / "__init__.py").touch()
-            shutil.copytree(SOURCE, utils / "infrastructure")
+            shutil.copytree(SOURCE, utils / "py-infrastructure")
             (root / ".project-root").touch()
 
             script = """
 from pathlib import Path
-from utils.infrastructure import Infrastructure
+from importlib import import_module
+Infrastructure = import_module("utils.py-infrastructure").Infrastructure
 
 infra = Infrastructure.initialize(
     output_dir=Path("artifacts"),

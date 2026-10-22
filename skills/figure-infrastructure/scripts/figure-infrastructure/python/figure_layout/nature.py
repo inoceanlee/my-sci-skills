@@ -32,7 +32,7 @@ def _run(script: Path, pdf: Path, args: tuple[str, ...] = ()) -> dict | None:
             check=False,
             timeout=30,
         )
-        if proc.returncode not in (0, 1):
+        if proc.returncode not in (0, 1, 2):
             return None
         return json.loads(proc.stdout)
     except (OSError, subprocess.TimeoutExpired, ValueError):
@@ -51,6 +51,15 @@ def audit_nature_pdf(
         return NatureAudit("not_auditable", issues=("NATURE_SOURCE_UNAVAILABLE",))
     geometry = _run(collision, pdf)
     text = _run(fonts, pdf, ("--min-pt", str(minimum_pt)))
+    if isinstance(geometry, dict) and isinstance(text, dict):
+        resource_limited = any(
+            str(value).startswith("RESOURCE_LIMIT")
+            for report in (geometry, text)
+            for key in ("issues", "warnings")
+            for value in (report.get(key) or ())
+        )
+        if resource_limited:
+            return NatureAudit("not_auditable", issues=("RESOURCE_LIMIT",))
     if (not isinstance(geometry, dict) or not isinstance(text, dict) or
             not geometry.get("auditable") or not text.get("auditable") or
             text.get("warnings")):

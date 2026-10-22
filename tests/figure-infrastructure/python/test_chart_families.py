@@ -1,23 +1,22 @@
 """Representative scientific chart families: real, readable exported figures."""
 
-from copy import deepcopy
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from runpy import run_path
 from tempfile import TemporaryDirectory
-import xml.etree.ElementTree as ET
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image, ImageStat
-from pypdf import PdfReader
 import pytest
 import seaborn as sns
-
-from figure_layout import FigureExporter, LayoutPolicy, PRESETS
+from figure_layout import PRESETS, FigureExporter, LayoutPolicy
+from figure_layout.exporter import _deepcopy_figure
 from figure_layout.layout import FigureLayoutOptimizer
-
+from PIL import Image, ImageStat
+from pypdf import PdfReader
 
 KINDS = (
     "line", "band", "scatter", "bubble", "bar", "hist",
@@ -28,7 +27,7 @@ KINDS = (
 
 
 def measure_metrics(fig, preset="single"):
-    measured = deepcopy(fig)
+    measured = _deepcopy_figure(fig)
     canvas = getattr(PRESETS, preset)
     measured.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
     measured.set_dpi(canvas.dpi)

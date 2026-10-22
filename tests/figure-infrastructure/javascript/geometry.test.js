@@ -46,11 +46,14 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
         node.style.position="fixed";node.style.left="0";node.style.top="0";
         node.data=original.data;node._fullLayout=original._fullLayout;
         document.body.append(node);
-        const svg=node.querySelector("svg.main-svg");
-        const screenTarget=node.querySelector(".ytitle").getBoundingClientRect();
-        const target=new DOMPoint(screenTarget.left,screenTarget.top)
-          .matrixTransform(svg.getScreenCTM().inverse());
-        node.querySelector(".legend").setAttribute("transform",`translate(${target.x},${target.y})`);
+        const titleRect=node.querySelector(".ytitle").getBoundingClientRect();
+        const legend=node.querySelector(".legend");
+        const legendRect=legend.getBoundingClientRect();
+        const delta=new DOMPoint(
+          titleRect.left-legendRect.left,titleRect.top-legendRect.top,0,0
+        ).matrixTransform(legend.parentElement.getScreenCTM().inverse());
+        legend.setAttribute("transform",
+          `translate(${delta.x},${delta.y}) ${legend.getAttribute("transform")||""}`);
         const audited=new window.ScientificFigureAudit.PlotlyGeometryAuditor().audit(node,preset);
         node.remove();
         return audited;

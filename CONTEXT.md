@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- Task 6 已提交在 `figure-three-level-api`；本地快进合并待主工作树可安全更新后执行。
+- 三级 API 已快进合并到本地 `main=2b7dd30`。公开远端和旧 `plotly-live-layout` 工作树未改。
 - 工作位于系统 Temp 独立工作树的 `figure-three-level-api` 分支。旧 `plotly-live-layout` 工作树保持原样。
 - Task 1（Python L1）完成，提交 `713a3d6`：`ScientificFigure.from_matplotlib()` 接收 Figure/Axes，操作副本；`audit()` 返回结构化结果。
 - Task 2（Python L2）完成，提交 `ded3b75`：受管布局、标注所有权、源图隔离、scope 限制、越界跳过恢复和失败候选清理。
@@ -17,14 +17,14 @@
 - Task 4 验证：JavaScript 全量 87/87 通过；390px 与 1280px 浏览器截图已检查，独立复审通过。
 - Task 5（双后端 L3）完成并提交 `f430919`：Python/JavaScript `ScientificFigure.export()` 支持工厂直调和受管标注复用；候选选择和审查由各自管线负责，源图不变。
 - Task 5 验证：Python 311 tests、6 subtests；JavaScript 89/89；评分与最终测量异常均验证 Python 候选图清理；真实 PNG 已检查。
-- Task 6 代码和文档迁移已完成。Python 全量 311 tests、6 subtests 通过；JavaScript 全量 90/90 通过。
-- Task 6 浏览器回归先测到 Plotly 图形标题 5.58 pt，低于 6 pt；布局安全余量调整后，真实 SVG 回归通过 `>=6 pt` 检查。
-- 全图族视觉画廊已生成。导出无拒绝，但 52 个 `native_only` 图形返回 `not_auditable`，因此验收脚本报告 `incomplete` 并退出非零；此结果符合能力矩阵边界。单栏、双栏折线和双栏热力图已打开检查，图面清晰。
-- Task 6 review completed; previous lifecycle concerns were fixed. Final review found only a documentation language nit, which is now resolved.
+- Task 6 已完成旧 API 迁移、文档更新和标题边界修复。红测实测 5.58 pt，修复后的 SVG 净空达到 6 pt。
+- 合并后 Python 全量测试通过：311 tests、6 subtests。JavaScript 全量测试通过：90/90。
+- 视觉图库无拒绝导出；52 个 `native_only` 图形返回 `not_auditable`。验收状态为 `incomplete`，代表性单栏、双栏折线和双栏热力图已目视检查。
+- 独立复审中的生命周期问题已修复。最终复审提出的文档语言建议也已处理。
 
 ## 下一步
 
-1. 将 `figure-three-level-api` 快进合并到本地 `main`。主工作树当前在 `gallery.html` 和 `browser.test.js` 有未提交改动，需保留。
+1. `native_only` 审查覆盖与正式 `v0.1.0` 发布作为独立任务规划。
 
 ## 用户约束
 

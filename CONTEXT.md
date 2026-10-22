@@ -7,7 +7,7 @@
 ## 当前状态
 
 - 三级 API 已快进合并到本地 `main`。主工作树保留 `browser.test.js` 中两行空白的原有未提交改动。
-- 工作位于系统 Temp 独立工作树的 `figure-three-level-api` 分支。旧 `plotly-live-layout` 工作树保持原样。
+- Task 临时工作树已清理。旧 `plotly-live-layout` 工作树按用户要求删除，其分支历史保留。
 - Task 1（Python L1）完成，提交 `713a3d6`：`ScientificFigure.from_matplotlib()` 接收 Figure/Axes，操作副本；`audit()` 返回结构化结果。
 - Task 2（Python L2）完成，提交 `ded3b75`：受管布局、标注所有权、源图隔离、scope 限制、越界跳过恢复和失败候选清理。
 - Task 2 验证：56 tests、4 subtests 通过；真实单图已打开，审计通过并放置 1 个标注。异常路径 Figure 泄漏已由回归测试修复，独立复审通过。
@@ -21,6 +21,7 @@
 - 合并后 Python 全量测试通过：311 tests、6 subtests。JavaScript 全量测试通过：90/90。
 - 视觉图库无拒绝导出；52 个 `native_only` 图形返回 `not_auditable`。验收状态为 `incomplete`，代表性单栏、双栏折线和双栏热力图已目视检查。
 - 独立复审中的生命周期问题已修复。最终复审提出的文档语言建议也已处理。
+- 新版 `figure-infrastructure` 已替换到当前用户的 OMP Skill 目录。Python 包导入与 JavaScript `ScientificFigure.fromPlotly` 均已从安装目录验证。
 
 ## 下一步
 
@@ -30,11 +31,11 @@
 
 - 不做 L4 数据生图、图形类别生成器或雷达项目接入；后端是 Matplotlib/Seaborn 与 Plotly。可移除旧专用导出 API，不为兼容保留重复入口。
 - Skill 实现放在 `skills/<name>/scripts/`，测试放在根 `tests/`。不新增生产依赖，不创建 Skill 专属环境。
-- 全局环境只读，不修改 Scoop、Python base、Node/npm 或系统 Python。任务工作树和视觉临时文件留在系统 Temp。不更新 OMP Skills 安装。
+- 全局开发环境只读，不修改 Scoop、Python base、Node/npm 或系统 Python。仅在用户明确授权后更新 OMP Skill；本轮已获准更新 Figure Skill。
 - L1 不改调用方图。Python L2 只改句柄副本；JavaScript L2 只受控更新当前 Plotly 图。L3 导出不改源图。
 - 用户数据、用户标注、固定轴范围、色标和必需标注不得静默改变。审计不完整必须标记 `not_auditable`，不得报告通过。
 - 图像任务要打开真实渲染图。测试要验证真实行为和边界。
-- 公共仓库推送前检查 Git 历史、凭据、本机路径和第三方许可。未另行授权时不推送、不发布、不部署。
+- 公共仓库推送前检查 Git 历史、凭据、本机路径和第三方许可。未授权时不推送或发布版本。
 
 ## 关键决策
 
@@ -56,7 +57,7 @@
 
 - 消费项目自行安装运行依赖。Figure Skill 保留项目 `pyproject.toml` 和 JS 源码。
 - 自有源码使用 MIT。Nature PDF 第三方脚本保留 Apache-2.0 许可和上游归属。
-- 本轮仅本地快进合并 `main`。推送、安装更新和版本标签需另行授权。
+- 本轮已将三级 API 快进合并到本地 `main`，并按用户指示替换当前 OMP 的 Figure Skill。未推送或发布版本。
 
 ## 可复用踩坑
 
@@ -78,6 +79,7 @@
 - `skills/figure-infrastructure/SKILL.md` 与 `references/`：公开 API 和能力边界。
 - `skills/figure-infrastructure/scripts/figure-infrastructure/`：Python/JavaScript 实现。
 - `tests/figure-infrastructure/`：回归测试、浏览器测试与视觉验收。
+- 当前 OMP Figure Skill：`~/.omp/agent/skills/figure-infrastructure/`。
 
 ---
 _最后核对：2026-10-22_

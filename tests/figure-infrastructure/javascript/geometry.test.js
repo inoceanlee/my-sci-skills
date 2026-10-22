@@ -61,7 +61,7 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
       assert.equal(result.geometryStatus,"failed",JSON.stringify(result));
       const issue=result.geometryIssues.find(item=>item.code==="GEOMETRY_COLLISION");
       assert.ok(issue);
-      assert.ok(issue.elementIds.includes("axis:y_title"));
+      assert.ok(issue.elementIds.includes("axis:y_title"),JSON.stringify(result));
       assert.ok(issue.elementIds.some(id=>id.startsWith("legend")));
       assert.ok(issue.overlapPt2>0);
       assert.ok(issue.rectsPt.every(rect=>rect.every(Number.isFinite)));

@@ -2,14 +2,11 @@
 name = "my-sci-skills-dev"
 version = "0.1.0"
 requires-python = ">=3.12,<3.15"
-dependencies = ["sci-figure-infrastructure"]
 
 [tool.uv]
 package = false
 python-downloads = "manual"
 
-[tool.uv.sources]
-sci-figure-infrastructure = { path = "skills/figure-infrastructure/scripts/figure-infrastructure", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8"]

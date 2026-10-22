@@ -26,39 +26,47 @@ description: Use when preparing publication-sized Matplotlib, Seaborn, or Plotly
 
 ## Python 调用
 
-先创建 Matplotlib Figure，再调用导出器：
+先创建 Matplotlib Figure，再创建独立句柄：
 
 ```python
-from figure_layout import FigureExporter
+from figure_layout import ScientificFigure
 
-result = FigureExporter().export(fig, "figure.png")
+with ScientificFigure.from_matplotlib(fig) as figure:
+    report = figure.audit()
+    layout = figure.layout()
+    result = figure.export("figure.png")
 ```
 
-支持 PNG、SVG 和 PDF。完整参数、审计字段和错误见[Python API](references/python-api.md)。
+审查、布局和导出可独立调用。句柄管理副本，不改原始 Figure。Python 支持 PNG、SVG 和 PDF。完整契约见[三级 API](references/api-levels.md)和[Python API](references/python-api.md)。
 
 ## Plotly 调用
 
-Plotly 导出要求浏览器 DOM。加载 Plotly.js 和 Skill 脚本后调用：
+Plotly 导出需要浏览器 DOM。加载 Plotly.js 和 Skill 脚本后调用：
 
 ```javascript
-const result = await exportScientificFigure(
-  document.querySelector("#plot"),
-  { format: "png" }
-);
+const figure = ScientificFigure.fromPlotly(document.querySelector("#plot"));
+try {
+  const report = await figure.audit();
+  const layout = await figure.layout();
+  const result = await figure.export({ format: "png" });
+} finally {
+  figure.dispose();
+}
 ```
 
-支持 PNG 和 SVG。完整选项、返回值和错误见[JavaScript API](references/javascript-api.md)。
+Plotly 支持 PNG 和 SVG，不支持 PDF。完整契约见[三级 API](references/api-levels.md)和[JavaScript API](references/javascript-api.md)。
 
 ## 审查结果
 
-查看[能力矩阵](references/capability-matrix.md)，确认所选图形的审查范围。`supported` 表示必需几何角色已审查。`native_only` 表示图形可导出，但至少一种必需几何角色无法完整审查。
+查看[能力矩阵](references/capability-matrix.md)，确认图形的审查范围。`supported` 表示必需几何角色已审查。`native_only` 表示图形可导出，但至少一种必需几何角色无法完整审查。
 
-检查 `audit.geometryStatus` 或 `result.audit.geometry_status`。`not_auditable` 不等于通过。无法安全放置必需标注或无法解决布局冲突时，导出会失败。
+检查 `audit.geometryStatus` 或 `result.audit.geometry_status`。`not_auditable` 不等于通过。无法安全放置必需标注或解决布局冲突时，导出会失败。
 
-普通调用只读 `SKILL.md` 和 `references`；不为使用 API 阅读或修改 `scripts` 实现。只有明确开发 Skill 任务时才按工程规范读取源码。
+普通调用只读 `SKILL.md` 和 `references`。使用 API 时，不读取或修改 `scripts` 实现。只有明确开发 Skill 时，才按工程规范读取源码。
 
 ## 参考
 
+- [三级 API](references/api-levels.md)
 - [Python API](references/python-api.md)
 - [JavaScript API](references/javascript-api.md)
 - [项目环境依赖](references/dependencies.md)

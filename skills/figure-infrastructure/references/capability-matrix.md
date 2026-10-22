@@ -7,6 +7,7 @@
 | 能力或图形类型 | Matplotlib/Seaborn | Plotly.js |
 | --- | --- | --- |
 | 范围策略与单双栏固定图幅 | supported | supported |
+| 独立 L1 审查、L2 布局、L3 导出 | supported | supported |
 | 自动收紧留白 | supported（图形状态见下表） | supported（图形状态见下表） |
 | 峰值标注、避让与锚点引导线 | supported（折线） | supported（折线） |
 | 单栏/双栏 PDF 导出 | supported | unsupported |

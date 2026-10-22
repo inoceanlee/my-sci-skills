@@ -121,7 +121,7 @@
           const key = marginKeys[side];
           if (!key) continue;
           margin[key] = (Number(margin[key]) || 0) +
-            deficit * preset.dpi / 72 + 1;
+            deficit * preset.dpi / 72 + 9;
           changed = true;
         }
       }

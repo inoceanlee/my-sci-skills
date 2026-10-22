@@ -12,18 +12,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import seaborn as sns
-from figure_layout import PRESETS, FigureExporter, LayoutPolicy
+from figure_layout import PRESETS, LayoutPolicy
+from _figure_api import export_figure
 from figure_layout.exporter import _deepcopy_figure
 from figure_layout.layout import FigureLayoutOptimizer
 from PIL import Image, ImageStat
 from pypdf import PdfReader
 
 KINDS = (
-    "line", "band", "scatter", "bubble", "bar", "hist",
-    "box", "violin", "kde", "ecdf", "regression",
-    "pie", "donut", "heatmap", "correlation", "contour"
+    "line",
+    "band",
+    "scatter",
+    "bubble",
+    "bar",
+    "hist",
+    "box",
+    "violin",
+    "kde",
+    "ecdf",
+    "regression",
+    "pie",
+    "donut",
+    "heatmap",
+    "correlation",
+    "contour",
 )
-
 
 
 def measure_metrics(fig, preset="single"):
@@ -38,9 +51,7 @@ def measure_metrics(fig, preset="single"):
 
 
 EXPECTED_AUDIT_STATUS = {kind: "not_auditable" for kind in KINDS}
-EXPECTED_AUDIT_STATUS.update({
-    "line": "passed", "kde": "passed", "ecdf": "passed"
-})
+EXPECTED_AUDIT_STATUS.update({"line": "passed", "kde": "passed", "ecdf": "passed"})
 EXPECTED_AUDITED_ROLES = {
     "line": {"axis_title", "data_line", "legend", "legend_text", "tick_label"},
     "kde": {"axis_title", "data_line", "tick_label"},
@@ -58,20 +69,21 @@ def assert_audit_status(audit, kind):
         assert audit.passed
         assert EXPECTED_AUDITED_ROLES[kind] <= set(audit.audited_roles)
 
+
 def make_chart(kind):
     fig, ax = plt.subplots()
     x = np.linspace(0, 4, 160)
     y = np.sin(x * 1.8) + 1.2
-    samples = np.sin(np.linspace(0, 6, 80)) + np.linspace(0, .3, 80)
+    samples = np.sin(np.linspace(0, 6, 80)) + np.linspace(0, 0.3, 80)
     if kind == "line":
         ax.plot(x, y, label="Signal")
     elif kind == "band":
         ax.plot(x, y, label="Mean")
-        ax.fill_between(x, y-.12, y+.12, alpha=.25, label="95% interval")
+        ax.fill_between(x, y - 0.12, y + 0.12, alpha=0.25, label="95% interval")
     elif kind == "scatter":
         ax.scatter(x[::7], y[::7], label="Observations")
     elif kind == "bubble":
-        ax.scatter(x[::7], y[::7], s=20+100*np.abs(y[::7]), label="Intensity")
+        ax.scatter(x[::7], y[::7], s=20 + 100 * np.abs(y[::7]), label="Intensity")
     elif kind == "bar":
         ax.bar(["A", "B", "C"], [2, 3, 1])
     elif kind == "hist":
@@ -87,18 +99,25 @@ def make_chart(kind):
     elif kind == "regression":
         sns.regplot(x=x[::6], y=y[::6], ax=ax)
     elif kind in ("pie", "donut"):
-        ax.pie([45, 35, 20], labels=["A", "B", "C"],
-               wedgeprops={"width": .45} if kind == "donut" else None)
+        ax.pie(
+            [45, 35, 20],
+            labels=["A", "B", "C"],
+            wedgeprops={"width": 0.45} if kind == "donut" else None,
+        )
     elif kind in ("heatmap", "correlation"):
-        matrix = np.sin(np.linspace(0, 2, 7)[:, None]) * np.cos(np.linspace(0, 3, 7)[None, :])
+        matrix = np.sin(np.linspace(0, 2, 7)[:, None]) * np.cos(
+            np.linspace(0, 3, 7)[None, :]
+        )
         colorbar_label = "Correlation" if kind == "correlation" else "Value"
         if kind == "correlation":
-            matrix = np.corrcoef(np.column_stack([samples, np.roll(samples, 4),
-                                                   np.roll(samples, 11)]), rowvar=False)
+            matrix = np.corrcoef(
+                np.column_stack([samples, np.roll(samples, 4), np.roll(samples, 11)]),
+                rowvar=False,
+            )
         sns.heatmap(matrix, ax=ax, cbar=True, cbar_kws={"label": colorbar_label})
     elif kind == "contour":
         X, Y = np.meshgrid(np.linspace(-2, 2, 40), np.linspace(-2, 2, 40))
-        image = ax.contourf(X, Y, np.exp(-X*X-Y*Y), levels=10)
+        image = ax.contourf(X, Y, np.exp(-X * X - Y * Y), levels=10)
         fig.colorbar(image, ax=ax, label="Intensity (a.u.)")
     else:
         raise ValueError(kind)
@@ -136,7 +155,7 @@ def test_single_column_png_is_nonempty_and_unclipped(kind):
     fig = make_chart(kind)
     with TemporaryDirectory() as temp:
         path = Path(temp) / f"{kind}.png"
-        result = FigureExporter().export(fig, path, kind=kind)
+        result = export_figure(fig, path)
         assert result.audit.layout_metrics is not None
         assert result.audit.layout_metrics.clipping_count == 0
         assert_audit_status(result.audit, kind)
@@ -154,22 +173,33 @@ def test_svg_and_pdf_preserve_exact_canvas_dimensions(kind, preset, extension):
     canvas = getattr(PRESETS, preset)
     with TemporaryDirectory() as temp:
         path = Path(temp) / f"{kind}-{preset}.{extension}"
-        result = FigureExporter().export(fig, path, kind=kind, preset=preset)
+        result = export_figure(fig, path, preset=preset)
         assert_audit_status(result.audit, kind)
-        assert (result.width_px, result.height_px) == (canvas.width_px, canvas.height_px)
+        assert (result.width_px, result.height_px) == (
+            canvas.width_px,
+            canvas.height_px,
+        )
         assert path.stat().st_size > 300
         if extension == "svg":
             root = ET.parse(path).getroot()
             assert root.tag.endswith("svg")
-            assert float(root.attrib["width"].removesuffix("mm")) == pytest.approx(canvas.width_mm)
-            assert float(root.attrib["height"].removesuffix("mm")) == pytest.approx(canvas.height_mm)
+            assert float(root.attrib["width"].removesuffix("mm")) == pytest.approx(
+                canvas.width_mm
+            )
+            assert float(root.attrib["height"].removesuffix("mm")) == pytest.approx(
+                canvas.height_mm
+            )
             assert "viewBox" in root.attrib
         else:
             assert result.audit.nature_audit is not None
             assert result.audit.nature_audit.status == "passed"
             page = PdfReader(path).pages[0]
-            assert float(page.mediabox.width) == pytest.approx(canvas.width_in * 72, abs=0.1)
-            assert float(page.mediabox.height) == pytest.approx(canvas.height_in * 72, abs=0.1)
+            assert float(page.mediabox.width) == pytest.approx(
+                canvas.width_in * 72, abs=0.1
+            )
+            assert float(page.mediabox.height) == pytest.approx(
+                canvas.height_in * 72, abs=0.1
+            )
     plt.close(fig)
 
 
@@ -178,13 +208,15 @@ def test_double_column_png_preserves_exact_dimensions(kind):
     fig = make_chart(kind)
     with TemporaryDirectory() as temp:
         target = Path(temp) / f"{kind}-double.png"
-        result = FigureExporter().export(fig, target, kind=kind, preset="double")
+        result = export_figure(fig, target, preset="double")
         assert_audit_status(result.audit, kind)
         assert result.audit.layout_metrics.clipping_count == 0
         with Image.open(target) as image:
             assert image.size == (PRESETS.double.width_px, PRESETS.double.height_px)
             assert ImageStat.Stat(image.convert("L")).stddev[0] > 2, kind
     plt.close(fig)
+
+
 EXPECTED_LABELS = {
     "line": ("Distance (m)", "Signal value", None),
     "band": ("Distance (m)", "Signal value", None),
@@ -219,7 +251,7 @@ def test_family_fixture_labels_axes_and_colorbars(kind, expected):
 def test_compact_layout_recovers_each_family_after_gap_injection(kind):
     fig = make_chart(kind)
     ax = fig.axes[0]
-    fig.subplots_adjust(left=.42, right=.57, bottom=.42, top=.58)
+    fig.subplots_adjust(left=0.42, right=0.57, bottom=0.42, top=0.58)
     if ax.get_xlabel():
         ax.xaxis.labelpad = 45
     if ax.get_ylabel():
@@ -228,19 +260,21 @@ def test_compact_layout_recovers_each_family_after_gap_injection(kind):
     if legend is not None:
         legend.set_bbox_to_anchor((1.75, 1.15), transform=ax.transAxes)
     for colorbar in fig.axes[1:]:
-        colorbar.set_position((.90, .40, .025, .20))
+        colorbar.set_position((0.90, 0.40, 0.025, 0.20))
 
     with TemporaryDirectory() as temp:
-        exporter = FigureExporter()
+        exporter = export_figure
         before = measure_metrics(fig)
-        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        compact = exporter(fig, Path(temp) / f"{kind}-compact.png")
         after = compact.audit.layout_metrics
-        assert after.plot_area_fraction > before.plot_area_fraction + .15, kind
+        assert after.plot_area_fraction > before.plot_area_fraction + 0.15, kind
         assert after.clipping_count == 0, kind
         assert_audit_status(compact.audit, kind)
         for axis in ("x", "y"):
             if before.axis_title_gaps_pt[axis] is not None:
-                assert after.axis_title_gaps_pt[axis] < before.axis_title_gaps_pt[axis], kind
+                assert (
+                    after.axis_title_gaps_pt[axis] < before.axis_title_gaps_pt[axis]
+                ), kind
         if len(fig.axes) > 1:
             assert after.colorbar_plot_gap_pt > 0, kind
         if legend is not None:
@@ -253,15 +287,16 @@ def test_compact_layout_recovers_each_family_after_gap_injection(kind):
 @pytest.mark.parametrize("kind", KINDS)
 def test_compact_layout_reduces_each_outer_margin_after_margin_injection(kind):
     fig = make_chart(kind)
-    fig.subplots_adjust(left=.42, right=.57, bottom=.42, top=.58)
+    fig.subplots_adjust(left=0.42, right=0.57, bottom=0.42, top=0.58)
     with TemporaryDirectory() as temp:
-        exporter = FigureExporter()
+        exporter = export_figure
         before = measure_metrics(fig)
-        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        compact = exporter(fig, Path(temp) / f"{kind}-compact.png")
         after = compact.audit.layout_metrics
         for side, old, new in zip(
             ("left", "right", "bottom", "top"),
-            before.outer_gaps_pt, after.outer_gaps_pt,
+            before.outer_gaps_pt,
+            after.outer_gaps_pt,
         ):
             assert abs(new) < abs(old), f"{kind} {side}: before={old}, after={new}"
         assert after.clipping_count == 0, (kind, compact.audit.issues)
@@ -274,16 +309,18 @@ def test_compact_layout_reduces_legend_gap_after_legend_injection(kind):
     legend = fig.axes[0].get_legend()
     legend.set_bbox_to_anchor((1.75, 1.15), transform=fig.axes[0].transAxes)
     with TemporaryDirectory() as temp:
-        exporter = FigureExporter()
+        exporter = export_figure
         before = measure_metrics(fig).legend_plot_gap_pt
-        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        compact = exporter(fig, Path(temp) / f"{kind}-compact.png")
         after = compact.audit.layout_metrics.legend_plot_gap_pt
         assert after < before, f"{kind}: before={before}, after={after}"
         assert compact.audit.layout_metrics.clipping_count == 0, kind
     plt.close(fig)
 
 
-@pytest.mark.parametrize("kind", tuple(kind for kind in KINDS if kind not in ("pie", "donut")))
+@pytest.mark.parametrize(
+    "kind", tuple(kind for kind in KINDS if kind not in ("pie", "donut"))
+)
 def test_compact_layout_reduces_axis_title_gaps_after_labelpad_injection(kind):
     fig = make_chart(kind)
     ax = fig.axes[0]
@@ -292,14 +329,17 @@ def test_compact_layout_reduces_axis_title_gaps_after_labelpad_injection(kind):
     if ax.get_ylabel():
         ax.yaxis.labelpad = 40
     with TemporaryDirectory() as temp:
-        exporter = FigureExporter()
+        exporter = export_figure
         before = measure_metrics(fig).axis_title_gaps_pt
-        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        compact = exporter(fig, Path(temp) / f"{kind}-compact.png")
         after = compact.audit.layout_metrics.axis_title_gaps_pt
         for axis in ("x", "y"):
             assert before[axis] is not None, f"{kind} {axis} title missing"
             assert after[axis] is not None and after[axis] < before[axis], (
-                kind, axis, before[axis], after[axis]
+                kind,
+                axis,
+                before[axis],
+                after[axis],
             )
     plt.close(fig)
 
@@ -308,11 +348,11 @@ def test_compact_layout_reduces_axis_title_gaps_after_labelpad_injection(kind):
 def test_compact_layout_reduces_colorbar_gap_after_colorbar_injection(kind):
     fig = make_chart(kind)
     for colorbar in fig.axes[1:]:
-        colorbar.set_position((.90, .40, .025, .20))
+        colorbar.set_position((0.90, 0.40, 0.025, 0.20))
     with TemporaryDirectory() as temp:
-        exporter = FigureExporter()
+        exporter = export_figure
         before = measure_metrics(fig).colorbar_plot_gap_pt
-        compact = exporter.export(fig, Path(temp) / f"{kind}-compact.png", kind=kind)
+        compact = exporter(fig, Path(temp) / f"{kind}-compact.png")
         after = compact.audit.layout_metrics.colorbar_plot_gap_pt
         assert after < before, f"{kind}: before={before}, after={after}"
         assert compact.audit.layout_metrics.clipping_count == 0, kind
@@ -322,11 +362,13 @@ def test_compact_layout_reduces_colorbar_gap_after_colorbar_injection(kind):
 def test_visual_gallery_rejected_export_is_not_reported_as_accepted():
     verifier_path = Path(__file__).parents[1] / "visual" / "verify_outputs.py"
     summarize = run_path(str(verifier_path))["summarize_acceptance"]
-    reports = [{
-        "export_error": ["CLEARANCE_VIOLATION"],
-        "audit_passed": False,
-        "geometry_status": None,
-    }]
+    reports = [
+        {
+            "export_error": ["CLEARANCE_VIOLATION"],
+            "audit_passed": False,
+            "geometry_status": None,
+        }
+    ]
 
     assert summarize([])["acceptance_status"] == "incomplete"
 
@@ -337,21 +379,19 @@ def test_visual_gallery_rejected_export_is_not_reported_as_accepted():
     assert summary["rejected_exports"] == 1
 
 
-def test_visual_gallery_does_not_write_fallback_after_rejected_export():
+def test_visual_gallery_does_not_write_fallback_after_rejected_export(monkeypatch):
     verifier_path = Path(__file__).parents[1] / "visual" / "verify_outputs.py"
     module = run_path(str(verifier_path))
+
+    def reject_export(*args, **kwargs):
+        raise module["LayoutValidationError"](["CLEARANCE_VIOLATION"])
 
     with TemporaryDirectory() as temp:
         gallery = module["VisualGallery"](Path(temp))
         gallery.KINDS = ("line",)
         gallery.PRESET_NAMES = ("single",)
         gallery.MODES = ("preserve",)
-
-        class RejectingExporter:
-            def export(self, *args, **kwargs):
-                raise module["LayoutValidationError"](["CLEARANCE_VIOLATION"])
-
-        gallery.exporter = RejectingExporter()
+        monkeypatch.setitem(gallery.render.__globals__, "export_figure", reject_export)
         report = gallery.render()[0]
 
         assert report["acceptance_status"] == "failed"
@@ -368,12 +408,12 @@ def test_visual_gallery_preserve_layouts_are_exportable(kind):
 
     try:
         with TemporaryDirectory() as temp:
-            result = FigureExporter().export(
-                fig, Path(temp) / f"{kind}.png", kind=kind,
-                preset="single", layout_policy=LayoutPolicy(mode="preserve"),
+            result = export_figure(
+                fig,
+                Path(temp) / f"{kind}.png",
+                preset="single",
+                layout_policy=LayoutPolicy(mode="preserve"),
             )
-        assert result.audit.passed or (
-            result.audit.geometry_status == "not_auditable"
-        )
+        assert result.audit.passed or (result.audit.geometry_status == "not_auditable")
     finally:
         plt.close(fig)

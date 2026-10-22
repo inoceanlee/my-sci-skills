@@ -30,8 +30,8 @@ test("offline PNG and SVG export preserves source Plotly state", async () => {
         data: graph.data, layout: graph.layout,
         range: graph._fullLayout.xaxis.range
       });
-      const png = await window.exportScientificFigure(graph, { format:"png", preset:"single" });
-      const svg = await window.exportScientificFigure(graph, { format:"svg", preset:"double" });
+      const png = await window.exportViaFigure(graph, { format:"png", preset:"single" });
+      const svg = await window.exportViaFigure(graph, { format:"svg", preset:"double" });
       const after = JSON.stringify({
         data: graph.data, layout: graph.layout,
         range: graph._fullLayout.xaxis.range
@@ -87,7 +87,7 @@ test("Plotly cleanup errors preserve export outcome and are reported", async () 
         Plotly.toImage = async () => { throw new Error("render failure"); };
         let failed;
         try {
-          await window.exportScientificFigure(document.getElementById("plot"), {
+          await window.exportViaFigure(document.getElementById("plot"), {
             format:"png"
           });
           failed = {unexpectedSuccess:true};
@@ -98,9 +98,7 @@ test("Plotly cleanup errors preserve export outcome and are reported", async () 
           };
         }
         Plotly.toImage = originalToImage;
-        const succeeded = await window.exportScientificFigure(
-          document.getElementById("plot"), {format:"png"}
-        );
+        const succeeded = await window.exportViaFigure(document.getElementById("plot"), {format:"png"});
         return {
           failed,
           succeeded:Boolean(succeeded.dataUrl),
@@ -143,7 +141,7 @@ test("preserve rejects data occlusion and compact layout recovers", async () => 
       });
       let preserved;
       try {
-        await window.exportScientificFigure(graph, {
+        await window.exportViaFigure(graph, {
           format:"png", layoutPolicy:{mode:"preserve"}
         });
         preserved = {code:null, details:null, dataUrl:true};
@@ -156,7 +154,7 @@ test("preserve rejects data occlusion and compact layout recovers", async () => 
       try {
       let compact;
       try {
-        compact = await window.exportScientificFigure(graph, {format:"png"});
+        compact = await window.exportViaFigure(graph, {format:"png"});
       } catch (error) {
         compact = {error:{code:error.code,details:error.details,message:error.message}};
       }
@@ -188,7 +186,7 @@ test("required Plotly peak annotations survive SVG export with anchored leaders"
     const result = await page.evaluate(async () => {
       const plot = document.getElementById("plot");
       const prior = JSON.stringify(plot.layout);
-      const exported = await window.exportScientificFigure(plot, {
+      const exported = await window.exportViaFigure(plot, {
         format:"svg", preset:"single",
         annotations:[
           {text:"bin 1, 1.0 m", x:1, y:100.001, required:true},
@@ -217,7 +215,7 @@ test("impossibly crowded mandatory Plotly labels reject without partial output",
     const result = await page.evaluate(async()=>{
       const plot=document.getElementById("plot");
       try{
-        await window.exportScientificFigure(plot,{
+        await window.exportViaFigure(plot,{
           format:"png",
           annotations:Array.from({length:30},(_,i)=>({
             text:"Required peak annotation "+i,x:1,y:100.001,required:true
@@ -381,6 +379,58 @@ test("export reuses live managed annotations without changing Plotly state", asy
     assert.equal(result.clearedCount, 0);
     assert.equal(result.width, 1004);
     assert.equal(result.height, 709);
+  } finally {
+    await browser.close();
+  }
+});
+test("compact export clears a Plotly figure title from the canvas edge", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const graph = document.getElementById("plot");
+      await Plotly.react(graph, [{
+        type:"scatter", mode:"lines", x:[0,1], y:[0,1]
+      }], {
+        width:1004,
+        height:709,
+        margin:{l:80,r:80,t:12,b:80,pad:0},
+        title:{text:"Optional title",y:1.04,x:0.5,xanchor:"center"},
+        xaxis:{title:{text:"Distance"}},
+        yaxis:{title:{text:"Value"}},
+        showlegend:false,
+        transition:{duration:0}
+      });
+      const figure = ScientificFigure.fromPlotly(graph);
+      const before = await figure.audit();
+      const exported = await figure.export({format:"svg",preset:"single"});
+      const source = exported.dataUrl.slice(exported.dataUrl.indexOf(",") + 1);
+      const markup = exported.dataUrl.includes(";base64,")
+        ? atob(source) : decodeURIComponent(source);
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "position:fixed;left:-10000px;top:0";
+      wrapper.innerHTML = markup;
+      document.body.appendChild(wrapper);
+      const svg = wrapper.querySelector("svg");
+      const title = svg.querySelector(".gtitle");
+      const titleGapPt = (title.getBoundingClientRect().top -
+        svg.getBoundingClientRect().top) * 72 / 96;
+      wrapper.remove();
+      figure.dispose();
+      return {before,after:exported.audit,titleGapPt};
+    });
+    assert.ok(result.before.geometryIssues.some(issue =>
+      issue.code === "CLEARANCE_VIOLATION" &&
+      issue.elementIds.includes("figure:title") &&
+      issue.elementIds.includes("canvas:top")
+    ), JSON.stringify(result.before.geometryIssues));
+    assert.ok(result.titleGapPt >= 6, `title gap: ${result.titleGapPt} pt`);
+    assert.ok(!result.after.geometryIssues.some(issue =>
+      issue.elementIds.includes("figure:title") &&
+      issue.elementIds.includes("canvas:top")
+    ), JSON.stringify(result.after.geometryIssues));
   } finally {
     await browser.close();
   }

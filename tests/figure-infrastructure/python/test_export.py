@@ -19,16 +19,17 @@ import seaborn as sns
 
 from figure_layout import (
     AnnotationSpec,
-    FigureExporter,
     LayoutPolicy,
     LayoutValidationError,
     PRESETS,
     RangePolicy,
     ScientificFigure,
 )
-from figure_layout.pipeline import FigurePipeline
-from figure_layout.layout import FigureLayoutOptimizer
 from figure_layout.audit import GeometryAuditor, GeometryResult
+from figure_layout.exporter import _MatplotlibWriter
+from figure_layout.layout import FigureLayoutOptimizer
+from figure_layout.pipeline import FigurePipeline
+from _figure_api import export_figure
 
 
 def make_line():
@@ -127,7 +128,7 @@ def test_candidate_selection_closes_candidate_and_best_when_scoring_fails(
 ):
     source = make_line()
     registered = set(plt.get_fignums())
-    original_score = FigureExporter._candidate_score
+    original_score = _MatplotlibWriter._candidate_score
     score_calls = 0
 
     def fail_after_first_score(geometry, metrics):
@@ -143,7 +144,7 @@ def test_candidate_selection_closes_candidate_and_best_when_scoring_fails(
         lambda *_args, **_kwargs: GeometryResult("passed", (), (), 0, 0),
     )
     monkeypatch.setattr(
-        FigureExporter, "_candidate_score", staticmethod(fail_after_first_score)
+        _MatplotlibWriter, "_candidate_score", staticmethod(fail_after_first_score)
     )
     try:
         with pytest.raises(RuntimeError, match="score failed"):
@@ -197,7 +198,7 @@ def test_export_has_publication_size(preset: str, extension: str):
     fig = make_line()
     with TemporaryDirectory() as temp:
         dest = Path(temp) / f"plot.{extension}"
-        result = FigureExporter().export(fig, dest, kind="line", preset=preset)
+        result = export_figure(fig, dest, preset=preset)
         assert result.path == dest
         assert dest.is_file() and dest.stat().st_size > 300
         assert result.audit.passed
@@ -237,10 +238,9 @@ def test_export_does_not_change_original_figure_or_axes():
         len(fig.axes),
     )
     with TemporaryDirectory() as temp:
-        FigureExporter().export(
+        export_figure(
             fig,
             Path(temp) / "preserved.png",
-            kind="line",
             range_policy={"y": RangePolicy(mode="auto", min_span=2)},
         )
     actual = (
@@ -261,7 +261,7 @@ def test_multiple_main_subplots_rejected_by_default():
     axes[1].plot([0, 1], [1, 0])
     with TemporaryDirectory() as temp:
         with pytest.raises(LayoutValidationError, match="MULTIPLE_MAIN_AXES"):
-            FigureExporter().export(fig, Path(temp) / "no.png", kind="line")
+            export_figure(fig, Path(temp) / "no.png")
         assert not (Path(temp) / "no.png").exists()
     plt.close(fig)
 
@@ -271,9 +271,7 @@ def test_colorbar_does_not_count_as_extra_subfigure():
     sns.heatmap(np.array([[1, 2], [2, 3]]), ax=ax, cbar=True)
     assert len(fig.axes) == 2
     with TemporaryDirectory() as temp:
-        result = FigureExporter().export(
-            fig, Path(temp) / "heatmap.png", kind="heatmap"
-        )
+        result = export_figure(fig, Path(temp) / "heatmap.png")
         assert result.audit.geometry_status == "not_auditable"
         assert not result.audit.passed
         assert result.audit.layout_metrics.collision_count is None
@@ -284,19 +282,18 @@ def test_unknown_preset_or_format_gives_explicit_error():
     fig = make_line()
     with TemporaryDirectory() as temp:
         with pytest.raises(ValueError, match="UNKNOWN_PRESET"):
-            FigureExporter().export(fig, Path(temp) / "x.png", preset="poster")
+            export_figure(fig, Path(temp) / "x.png", preset="poster")
         with pytest.raises(ValueError, match="UNSUPPORTED_FORMAT"):
-            FigureExporter().export(fig, Path(temp) / "x.doc", kind="line")
+            export_figure(fig, Path(temp) / "x.doc")
     plt.close(fig)
 
 
 def test_requested_axis_minimum_span_survives_export():
     fig = make_line()
     with TemporaryDirectory() as temp:
-        result = FigureExporter().export(
+        result = export_figure(
             fig,
             Path(temp) / "y.png",
-            kind="line",
             range_policy={"y": RangePolicy(min_span=2)},
         )
         assert result.audit.passed
@@ -309,7 +306,7 @@ def test_requested_axis_minimum_span_survives_export():
 
 def test_export_reports_geometry_after_required_annotations(tmp_path):
     fig = make_line()
-    result = FigureExporter().export(
+    result = export_figure(
         fig,
         tmp_path / "annotated.png",
         annotations=(AnnotationSpec("Peak bin 2", 1, 100.001),),
@@ -332,9 +329,7 @@ def test_export_preserve_collision_has_pt_details_and_keeps_target(tmp_path):
     target.write_bytes(b"previous export")
 
     with pytest.raises(LayoutValidationError) as caught:
-        FigureExporter().export(
-            fig, target, layout_policy=LayoutPolicy(mode="preserve")
-        )
+        export_figure(fig, target, layout_policy=LayoutPolicy(mode="preserve"))
 
     assert "GEOMETRY_COLLISION" in caught.value.issues
     collision = next(
@@ -358,7 +353,7 @@ def test_unsupported_data_is_exported_but_not_reported_as_passed(tmp_path):
     fig, ax = plt.subplots()
     ax.scatter([0, 1], [1, 0])
 
-    result = FigureExporter().export(fig, tmp_path / "scatter.png")
+    result = export_figure(fig, tmp_path / "scatter.png")
 
     assert result.path.is_file()
     assert result.audit.geometry_status == "not_auditable"
@@ -372,7 +367,7 @@ def test_export_moves_data_occluding_legend_before_passing(tmp_path):
     ax.plot([0, 1], [0, 1], label="Signal")
     ax.legend(loc="center")
 
-    result = FigureExporter().export(fig, tmp_path / "legend.png")
+    result = export_figure(fig, tmp_path / "legend.png")
 
     assert result.audit.geometry_status == "passed"
     assert not any(
@@ -401,7 +396,7 @@ def test_export_rejects_colorbar_clearance_conflict(tmp_path):
     )
 
     with pytest.raises(LayoutValidationError) as caught:
-        FigureExporter().export(
+        export_figure(
             fig,
             tmp_path / "colorbar.png",
             layout_policy=LayoutPolicy(mode="preserve"),
@@ -418,7 +413,7 @@ def test_export_rejects_colorbar_clearance_conflict(tmp_path):
 def test_export_preserves_fixed_and_reference_ranges(tmp_path):
     fig = make_line()
 
-    result = FigureExporter().export(
+    result = export_figure(
         fig,
         tmp_path / "ranges.png",
         range_policy={
@@ -439,7 +434,7 @@ def test_export_preserves_colorbar_scale_and_source_figure(tmp_path):
     original_position = colorbar.ax.get_position().bounds
     original_ticks = tuple(colorbar.get_ticks())
 
-    result = FigureExporter().export(fig, tmp_path / "fixed-scale.png", kind="heatmap")
+    result = export_figure(fig, tmp_path / "fixed-scale.png")
 
     assert result.path.is_file()
     assert result.audit.geometry_status == "not_auditable"

@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageStat
@@ -15,7 +16,8 @@ from PIL import Image, ImageDraw, ImageStat
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "python"))
 from test_chart_families import KINDS as CHART_KINDS, make_chart
 
-from figure_layout import FigureExporter, LayoutPolicy, LayoutValidationError, PRESETS
+from figure_layout import LayoutPolicy, LayoutValidationError, PRESETS
+from _figure_api import export_figure
 
 
 class VisualGallery:
@@ -26,15 +28,13 @@ class VisualGallery:
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.exporter = FigureExporter()
 
     @staticmethod
     def prepare_chart(fig) -> None:
-        fig.subplots_adjust(left=.22, right=.80, bottom=.25, top=.70)
+        fig.subplots_adjust(left=0.22, right=0.80, bottom=0.25, top=0.70)
         for ax in fig.axes:
             if ax.get_legend() is not None:
-                ax.legend(loc="lower center", bbox_to_anchor=(.5, 1.02))
-
+                ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02))
 
     def render(self) -> list[dict]:
         reports = []
@@ -49,8 +49,10 @@ class VisualGallery:
                         result = None
                         audit_error = None
                         try:
-                            result = self.exporter.export(
-                                fig, output, kind=kind, preset=preset,
+                            result = export_figure(
+                                fig,
+                                output,
+                                preset=preset,
                                 layout_policy=LayoutPolicy(mode=mode),
                             )
                         except LayoutValidationError as error:
@@ -63,59 +65,64 @@ class VisualGallery:
                         if result:
                             canvas = getattr(PRESETS, preset)
                             with Image.open(output) as img:
-                                variance = ImageStat.Stat(
-                                    img.convert("L")
-                                ).stddev[0]
+                                variance = ImageStat.Stat(img.convert("L")).stddev[0]
                                 if img.size != (canvas.width_px, canvas.height_px):
                                     raise AssertionError(
                                         f"incorrect size: {kind} {preset} {mode}"
                                     )
                         if variance is not None and (
-                            variance <= 2 or (
-                                metrics is not None and metrics.clipping_count
-                            )
+                            variance <= 2
+                            or (metrics is not None and metrics.clipping_count)
                         ):
                             raise AssertionError(
                                 f"blank or clipped figure: {kind} {preset} {mode}"
                             )
 
                         acceptance_status = (
-                            "failed" if audit_error else
-                            "passed" if result and result.audit.passed else
-                            "incomplete"
+                            "failed"
+                            if audit_error
+                            else "passed"
+                            if result and result.audit.passed
+                            else "incomplete"
                         )
-                        reports.append({
-                            "kind": kind, "preset": preset, "mode": mode,
-                            "file": str(output) if result else None,
-                            "geometry_status": (
-                                result.audit.geometry_status if result else None
-                            ),
-                            "audit_passed": (
-                                result.audit.passed if result else False
-                            ),
-                            "acceptance_status": acceptance_status,
-                            "visual_only": bool(
-                                result and acceptance_status != "passed"
-                            ),
-                            "audited_roles": (
-                                list(result.audit.audited_roles) if result else []
-                            ),
-                            "audit_issues": (
-                                list(result.audit.issues) if result else []
-                            ),
-                            "export_error": (
-                                list(audit_error.issues) if audit_error else []
-                            ),
-                            "pixel_std": (
-                                round(variance, 3) if variance is not None else None
-                            ),
-                            "plot_fraction": float(round(
-                                metrics.plot_area_fraction, 3
-                            )) if metrics else None,
-                            "clipping": (
-                                int(metrics.clipping_count) if metrics else None
-                            ),
-                        })
+                        reports.append(
+                            {
+                                "kind": kind,
+                                "preset": preset,
+                                "mode": mode,
+                                "file": str(output) if result else None,
+                                "geometry_status": (
+                                    result.audit.geometry_status if result else None
+                                ),
+                                "audit_passed": (
+                                    result.audit.passed if result else False
+                                ),
+                                "acceptance_status": acceptance_status,
+                                "visual_only": bool(
+                                    result and acceptance_status != "passed"
+                                ),
+                                "audited_roles": (
+                                    list(result.audit.audited_roles) if result else []
+                                ),
+                                "audit_issues": (
+                                    list(result.audit.issues) if result else []
+                                ),
+                                "export_error": (
+                                    list(audit_error.issues) if audit_error else []
+                                ),
+                                "pixel_std": (
+                                    round(variance, 3) if variance is not None else None
+                                ),
+                                "plot_fraction": float(
+                                    round(metrics.plot_area_fraction, 3)
+                                )
+                                if metrics
+                                else None,
+                                "clipping": (
+                                    int(metrics.clipping_count) if metrics else None
+                                ),
+                            }
+                        )
             finally:
                 plt.close(fig)
         return reports
@@ -151,13 +158,14 @@ class VisualGallery:
 def summarize_acceptance(reports: list[dict]) -> dict:
     rejected = sum(bool(report["export_error"]) for report in reports)
     incomplete = sum(
-        not report["audit_passed"] and not report["export_error"]
-        for report in reports
+        not report["audit_passed"] and not report["export_error"] for report in reports
     )
     status = (
-        "failed" if rejected else
-        "incomplete" if incomplete or not reports else
-        "passed"
+        "failed"
+        if rejected
+        else "incomplete"
+        if incomplete or not reports
+        else "passed"
     )
     return {
         "gallery_generated": bool(reports),
@@ -177,8 +185,11 @@ def main() -> int:
         for mode in app.MODES
     }
     summary = summarize_acceptance(rows)
-    print(json.dumps({**summary, "contact_sheets": sheets, "figures": rows},
-                     ensure_ascii=False))
+    print(
+        json.dumps(
+            {**summary, "contact_sheets": sheets, "figures": rows}, ensure_ascii=False
+        )
+    )
     return int(summary["acceptance_status"] != "passed")
 
 

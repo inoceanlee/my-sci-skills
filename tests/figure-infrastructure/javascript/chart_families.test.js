@@ -85,13 +85,13 @@ test("Plotly ten figure families export single and double offline PNG/SVG withou
       for(const preset of ["single","double"]){
         let stage="preserve";
         try {
-          const preserved=await window.exportScientificFigure(node,{
+          const preserved=await window.exportViaFigure(node,{
             format:"png",preset,layoutPolicy:{mode:"preserve"}
           });
           stage="compact-png";
-          const png=await window.exportScientificFigure(node,{format:"png",preset});
+          const png=await window.exportViaFigure(node,{format:"png",preset});
           stage="compact-svg";
-          const svg=await window.exportScientificFigure(node,{format:"svg",preset});
+          const svg=await window.exportViaFigure(node,{format:"svg",preset});
           rows.push({
             kind,preset,preservedDataUrl:preserved.dataUrl,
             pngDataUrl:png.dataUrl,svgDataUrl:svg.dataUrl,
@@ -214,7 +214,7 @@ test("compact retries default-length colorbar after measured clearance failure",
         showlegend:false
       });
       const before=JSON.stringify({data:node.data,layout:node.layout});
-      const exported=await window.exportScientificFigure(node,{format:"png"});
+      const exported=await window.exportViaFigure(node,{format:"png"});
       const after=JSON.stringify({data:node.data,layout:node.layout});
       return {before,after,exported};
     });
@@ -247,7 +247,7 @@ test("compact rejects intrinsic default colorbar title collision",async()=>{
       });
       const before=JSON.stringify({data:node.data,layout:node.layout});
       try{
-        const exported=await window.exportScientificFigure(node,{format:"png"});
+        const exported=await window.exportViaFigure(node,{format:"png"});
         return {unexpectedDataUrl:Boolean(exported.dataUrl),before,
           after:JSON.stringify({data:node.data,layout:node.layout})};
       }catch(error){
@@ -331,7 +331,7 @@ test("compact reduces fixable gaps and rejects fixed colorbar conflicts",async()
         });
         let compact;
         try {
-          compact=await window.exportScientificFigure(node,{format:"png",preset:"single"});
+          compact=await window.exportViaFigure(node,{format:"png",preset:"single"});
         } catch(error) {
           const colorbarConflict = error.code === "GEOMETRY_CONFLICT" &&
             error.details?.some(issue =>

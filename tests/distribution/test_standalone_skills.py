@@ -43,7 +43,8 @@ def test_markdown_links_resolve_in_copied_skills(tmp_path: Path) -> None:
     figure_source = figure / "scripts" / "figure-infrastructure"
     assert (figure_source / "pyproject.toml").is_file()
     assert (figure_source / "python" / "figure_layout" / "__init__.py").is_file()
-    assert (figure_source / "javascript" / "figure-layout.js").is_file()
+    assert (figure_source / "javascript" / "scientific-figure.js").is_file()
+    assert not (figure_source / "javascript" / "figure-layout.js").exists()
     assert (figure_source / "third_party" / "nature_figure" / "LICENSE").is_file()
     assert not (figure / "pyproject.toml").exists()
     assert (figure / "references" / "deployment.md").is_file()
@@ -86,7 +87,7 @@ def test_copied_python_figure_exports_in_project_environment(tmp_path: Path) -> 
         import matplotlib.pyplot as plt
         from PIL import Image
         import figure_layout
-        from figure_layout import FigureExporter
+        from figure_layout import ScientificFigure
 
         source = Path(sys.argv[1]).resolve()
         output = Path(sys.argv[2])
@@ -96,7 +97,8 @@ def test_copied_python_figure_exports_in_project_environment(tmp_path: Path) -> 
         axis.set_xlabel("time")
         axis.set_ylabel("value")
         axis.legend()
-        result = FigureExporter().export(figure, output)
+        with ScientificFigure.from_matplotlib(figure) as handle:
+            result = handle.export(output)
         assert result.audit.geometry_status == "passed"
         assert Image.open(output).size == (1004, 709)
         plt.close(figure)
@@ -162,7 +164,13 @@ def test_copied_plotly_figure_exports_in_project_environment(tmp_path: Path) -> 
                 {x:[0,1,2],y:[1,2,1],mode:"lines+markers",name:"series"}
               ], {xaxis:{title:{text:"time"}},yaxis:{title:{text:"value"}},showlegend:true});
               const before = JSON.stringify({data:plot.data,layout:plot.layout});
-              const exported = await exportScientificFigure(plot, {format:"png",preset:"single"});
+              const figure = ScientificFigure.fromPlotly(plot);
+              let exported;
+              try {
+                exported = await figure.export({format:"png",preset:"single"});
+              } finally {
+                figure.dispose();
+              }
               const after = JSON.stringify({data:plot.data,layout:plot.layout});
               return {before,after,exported};
             });
@@ -196,7 +204,7 @@ def test_copied_plotly_figure_exports_in_project_environment(tmp_path: Path) -> 
             str(figure_scripts / "annotations.js"),
             str(figure_scripts / "audit.js"),
             str(figure_scripts / "pipeline.js"),
-            str(figure_scripts / "figure-layout.js"),
+            str(figure_scripts / "scientific-figure.js"),
         ],
         cwd=REPOSITORY_ROOT,
         env=environment,

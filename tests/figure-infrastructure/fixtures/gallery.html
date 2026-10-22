@@ -16,8 +16,16 @@
   <script src="../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/pipeline.js"></script>
   <script
     src="../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/scientific-figure.js"></script>
-  <script
-    src="../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/figure-layout.js"></script>
+  <script>
+    window.exportViaFigure = async (plotDiv, options = {}) => {
+      const figure = ScientificFigure.fromPlotly(plotDiv);
+      try {
+        return await figure.export(options);
+      } finally {
+        figure.dispose();
+      }
+    };
+  </script>
   <script>
     window.ready = (async () => {
       const plot = document.getElementById("plot");

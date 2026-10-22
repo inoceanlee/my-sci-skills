@@ -4,21 +4,24 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from figure_layout import (
-    AnnotationSpec, FigureExporter, LayoutValidationError
-)
+from figure_layout import AnnotationSpec, LayoutValidationError
+from _figure_api import export_figure
 from figure_layout.annotations import place_annotations
 
 
 def spectrum():
     fig, ax = plt.subplots()
     x = np.linspace(0, 5, 300)
-    ax.plot(x, np.exp(-((x-2.0)/.16)**2) + .64*np.exp(-((x-2.34)/.13)**2))
+    ax.plot(
+        x,
+        np.exp(-(((x - 2.0) / 0.16) ** 2)) + 0.64 * np.exp(-(((x - 2.34) / 0.13) ** 2)),
+    )
     ax.set_xlabel("Distance (m)")
     ax.set_ylabel("Normalized amplitude")
     return fig, ax
@@ -28,7 +31,7 @@ def test_required_labels_visible_nonoverlapping_and_anchor_arrows():
     fig, ax = spectrum()
     items = [
         AnnotationSpec("Peak A: bin 20, 2.0 m", 2.0, 1.0),
-        AnnotationSpec("Peak B: bin 23, 2.34 m", 2.34, .64),
+        AnnotationSpec("Peak B: bin 23, 2.34 m", 2.34, 0.64),
     ]
     texts, arrows = place_annotations(ax, items)
     assert len(texts) == len(items)
@@ -47,11 +50,11 @@ def test_export_renders_required_labels_in_svg_and_preserves_input():
     fig, ax = spectrum()
     items = [
         AnnotationSpec("bin 20 · 2.0 m", 2.0, 1.0),
-        AnnotationSpec("bin 23 · 2.34 m", 2.34, .64),
+        AnnotationSpec("bin 23 · 2.34 m", 2.34, 0.64),
     ]
     with TemporaryDirectory() as temp:
         path = Path(temp) / "annotated.svg"
-        result = FigureExporter().export(fig, path, annotations=items)
+        result = export_figure(fig, path, annotations=items)
         assert result.audit.passed
         source = path.read_text(encoding="utf-8")
         assert "bin 20 · 2.0 m" in source
@@ -63,11 +66,12 @@ def test_export_renders_required_labels_in_svg_and_preserves_input():
 
 def test_crowded_required_labels_raise_instead_of_hiding_or_overlapping():
     fig, ax = spectrum()
-    labels = [AnnotationSpec("Critical fixed label " + str(i), 2.0, 1.0)
-              for i in range(30)]
+    labels = [
+        AnnotationSpec("Critical fixed label " + str(i), 2.0, 1.0) for i in range(30)
+    ]
     with TemporaryDirectory() as temp:
         target = Path(temp) / "impossible.png"
         with pytest.raises(LayoutValidationError, match="ANNOTATION"):
-            FigureExporter().export(fig, target, annotations=labels)
+            export_figure(fig, target, annotations=labels)
         assert not target.exists()
     plt.close(fig)

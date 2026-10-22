@@ -2,7 +2,7 @@
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const {candidatePlotlyLayouts, prepareCompactLayout, adjustPlotlyLayoutForGeometry} = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/layout.js");
-const {ScientificFigureExporter} = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/figure-layout.js");
+const {PlotlyExportPipeline} = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/pipeline.js");
 
 test("compact mode reduces all excessive margins and axis title standoff", () => {
   const source = {
@@ -80,19 +80,19 @@ test("colorbar length candidates adjust implicit and explicit defaults only", ()
     type:"heatmap",showscale:true,
     colorbar:{_traceIndex:0,len:1,lenmode:"fraction"}
   }];
-  const candidate=ScientificFigureExporter.shortenDefaultColorbarForClearance(
+  const candidate=PlotlyExportPipeline.shortenDefaultColorbarForClearance(
     source,fullData,[issue],preset,500
   );
   assert.ok(candidate[0].colorbar.len < 1);
   assert.equal(Object.hasOwn(source[0],"colorbar"),false);
   assert.notEqual(candidate,source);
   assert.equal(
-    ScientificFigureExporter.shortenDefaultColorbarForClearance(
+    PlotlyExportPipeline.shortenDefaultColorbarForClearance(
       [{type:"heatmap",colorbar:{len:1}}],fullData,[issue],preset,500
     ),null
   );
   assert.equal(
-    ScientificFigureExporter.shortenDefaultColorbarForClearance(
+    PlotlyExportPipeline.shortenDefaultColorbarForClearance(
       [{type:"heatmap",colorbar:{lenmode:"pixels"}}],fullData,[issue],preset,500
     ),null
   );

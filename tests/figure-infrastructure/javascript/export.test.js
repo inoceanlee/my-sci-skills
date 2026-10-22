@@ -2,30 +2,51 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const figureLayout = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/figure-layout.js");
-const { exportScientificFigure } = figureLayout;
+const { ScientificFigure } = require("../../../skills/figure-infrastructure/scripts/figure-infrastructure/javascript/scientific-figure.js");
+
+function makePlot(data) {
+  return {
+    data,
+    layout: {},
+    getBoundingClientRect: () => ({ width: 100, height: 100 })
+  };
+}
 
 test("PDF export returns an explicit unsupported-format error", async () => {
-  await assert.rejects(
-    exportScientificFigure({}, { format: "pdf" }),
-    /UNSUPPORTED_FORMAT/
-  );
+  const figure = ScientificFigure.fromPlotly(makePlot([]));
+  try {
+    await assert.rejects(figure.export({ format: "pdf" }), error =>
+      error.code === "UNSUPPORTED_FORMAT"
+    );
+  } finally {
+    figure.dispose();
+  }
 });
 
 test("multiple independent main axes are rejected", async () => {
-  const graph = {
-    data: [
-      { type: "scatter", x: [0, 1], y: [0, 1] },
-      { type: "scatter", x: [0, 1], y: [1, 0], xaxis: "x2", yaxis: "y2" }
-    ], layout: {}
-  };
-  await assert.rejects(exportScientificFigure(graph, { format: "png" }), /MULTIPLE_MAIN_AXES/);
+  const figure = ScientificFigure.fromPlotly(makePlot([
+    { type: "scatter", x: [0, 1], y: [0, 1] },
+    { type: "scatter", x: [0, 1], y: [1, 0], xaxis: "x2", yaxis: "y2" }
+  ]));
+  try {
+    await assert.rejects(figure.export({ format: "png" }), /MULTIPLE_MAIN_AXES/);
+  } finally {
+    figure.dispose();
+  }
 });
 
 test("unknown preset fails without rendering", async () => {
-  await assert.rejects(exportScientificFigure({ data: [], layout: {} }, { preset: "poster" }), /UNKNOWN_PRESET/);
+  const figure = ScientificFigure.fromPlotly(makePlot([]));
+  try {
+    await assert.rejects(figure.export({ preset: "poster" }), /UNKNOWN_PRESET/);
+  } finally {
+    figure.dispose();
+  }
 });
 
-test("the documented Plotly export entry point is public", () => {
-  assert.equal(typeof figureLayout.exportScientificFigure, "function");
+test("ScientificFigure exposes its documented export method", () => {
+  const figure = ScientificFigure.fromPlotly(makePlot([]));
+  assert.equal(typeof ScientificFigure.fromPlotly, "function");
+  assert.equal(typeof figure.export, "function");
+  figure.dispose();
 });

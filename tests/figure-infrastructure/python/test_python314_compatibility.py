@@ -6,7 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from figure_layout import FigureExporter
+from _figure_api import export_figure
 
 
 def test_categorical_bar_export_preserves_source_figure(tmp_path) -> None:
@@ -16,7 +16,7 @@ def test_categorical_bar_export_preserves_source_figure(tmp_path) -> None:
     original_labels = tuple(label.get_text() for label in axis.get_xticklabels())
 
     try:
-        result = FigureExporter().export(figure, tmp_path / "bar.png")
+        result = export_figure(figure, tmp_path / "bar.png")
 
         assert result.path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
         assert (result.width_px, result.height_px) == (1004, 709)

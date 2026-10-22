@@ -25,9 +25,10 @@ uv pip install --python <PROJECT_PYTHON> --editable <PROJECT_ROOT>/utils/figure-
 在项目环境运行 Python：
 
 ```python
-from figure_layout import FigureExporter
+from figure_layout import ScientificFigure
 
-result = FigureExporter().export(fig, "figure.png")
+with ScientificFigure.from_matplotlib(fig) as figure:
+    result = figure.export("figure.png")
 ```
 
 参数、格式、返回字段和错误见[Python API](python-api.md)。
@@ -48,16 +49,19 @@ npm install plotly.js-dist-min@4.1.2
 <script src="<FIGURE_SKILL_PATH>/javascript/layout.js"></script>
 <script src="<FIGURE_SKILL_PATH>/javascript/annotations.js"></script>
 <script src="<FIGURE_SKILL_PATH>/javascript/audit.js"></script>
-<script src="<FIGURE_SKILL_PATH>/javascript/figure-layout.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/pipeline.js"></script>
+<script src="<FIGURE_SKILL_PATH>/javascript/scientific-figure.js"></script>
 ```
 
-不要给脚本标签添加 `async`。页面需要先绘制 Plotly 图形，再调用 `exportScientificFigure`。
+不要给脚本标签添加 `async`。页面需要先绘制 Plotly 图形，再创建 `ScientificFigure` 句柄。
 
 ```javascript
-const result = await exportScientificFigure(
-  document.querySelector("#plot"),
-  { format: "svg", preset: "single" }
-);
+const figure = ScientificFigure.fromPlotly(document.querySelector("#plot"));
+try {
+  const result = await figure.export({ format: "svg", preset: "single" });
+} finally {
+  figure.dispose();
+}
 ```
 
 页面需要浏览器 DOM。Node.js 服务端不能直接导出浏览器图。检查 `result.audit.geometryStatus`；`not_auditable` 不等于通过。

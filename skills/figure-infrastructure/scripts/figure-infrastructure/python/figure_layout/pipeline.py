@@ -143,7 +143,7 @@ class FigurePipeline:
         scope="full",
         managed_gids=(),
     ):
-        from .exporter import FigureExporter, _deepcopy_figure
+        from .exporter import _MatplotlibWriter, _deepcopy_figure
 
         if scope not in ("full", "annotations"):
             raise ValueError("INVALID_LAYOUT_SCOPE")
@@ -155,9 +155,11 @@ class FigurePipeline:
         source_axes = _main_axes(figure)
         if len(source_axes) != 1:
             raise LayoutValidationError(["MULTIPLE_MAIN_AXES"])
-        exporter = FigureExporter()
+        exporter = _MatplotlibWriter()
         candidate_policies = (
-            FigureExporter._candidate_policies(policy) if scope == "full" else [policy]
+            _MatplotlibWriter._candidate_policies(policy)
+            if scope == "full"
+            else [policy]
         )
         best = None
         last_error = None
@@ -202,7 +204,7 @@ class FigurePipeline:
                     ):
                         codes = ("ANNOTATION_REQUIRED_UNPLACED", *codes)
                     raise LayoutValidationError(codes, geometry.issues)
-                score = FigureExporter._candidate_score(geometry, metrics)
+                score = _MatplotlibWriter._candidate_score(geometry, metrics)
                 if best is None or score < best[0]:
                     if best is not None:
                         plt.close(best[1])
@@ -263,9 +265,9 @@ class FigurePipeline:
         )
 
     def select_export_candidate(self, working, policy, annotations):
-        from .exporter import FigureExporter, _deepcopy_figure
+        from .exporter import _MatplotlibWriter, _deepcopy_figure
 
-        exporter = FigureExporter()
+        exporter = _MatplotlibWriter()
         best = None
         candidate = None
         last_error = None
@@ -387,12 +389,12 @@ class FigurePipeline:
         nature_audit_strict=False,
         managed_gids=(),
     ):
-        from .exporter import FigureExporter, _deepcopy_figure
+        from .exporter import _MatplotlibWriter, _deepcopy_figure
 
         working = _deepcopy_figure(figure)
         try:
             _remove_managed(working, managed_gids)
-            return FigureExporter().export(
+            return _MatplotlibWriter().export(
                 working,
                 path,
                 preset=preset,

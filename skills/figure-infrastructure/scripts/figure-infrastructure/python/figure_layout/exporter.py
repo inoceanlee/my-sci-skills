@@ -58,7 +58,7 @@ class ExportResult:
     audit: ExportAudit
 
 
-class FigureExporter:
+class _MatplotlibWriter:
     """Own export changes exclusively through a detached Figure copy."""
 
     _FORMATS = frozenset(("png", "svg", "pdf"))

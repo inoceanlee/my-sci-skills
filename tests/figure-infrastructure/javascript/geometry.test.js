@@ -569,7 +569,7 @@ test("Plotly geometry auditor checks rendered offline SVG geometry",async t=>{
         };
         let exported;
         try{
-          exported=await window.exportScientificFigure(node,{
+          exported=await window.exportViaFigure(node,{
             format:"svg",preset:"single",
             layoutPolicy:{mode:"compact",legend:"fixed"}
           });

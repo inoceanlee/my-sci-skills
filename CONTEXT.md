@@ -7,10 +7,12 @@
 ## 当前状态
 
 - 绘图几何审查 Task 1–6 和独立分发 Task 1–6 已合入 `main`；公开仓库为 `inoceanlee/my-sci-skills`。
-- 当前临时工作树位于系统 Temp，分支为 `project-api-environment`。
+- Temp 中有两个工作树：开发分支 `project-api-environment`，发布快照分支 `sync-main-snapshot`。
 - 项目环境 API 和 Skill 文档迁移提交为 `8aa4dcf`、`29c9d36`、`0b4c5d3`。
-- Task 4C CI 工作流已提交 `8666122`，覆盖 Windows/Linux、Python 3.12–3.14 和 JavaScript 浏览器测试。显式定位 Temp 后，Python 全量 294 passed、149 warnings、6 subtests；干净 `npm ci && npm test`：71 passed。
-- PowerShell `ConvertFrom-Yaml` 解析通过；Playwright dry-run 显示下载路径位于 runner Temp。分支复核确认历史路径风险；GitHub Runner 尚未执行。
+- Task 4C CI 的首次运行 `39710614748` 因 job 级 `runner.temp` 表达式无效而失败；`50804b4` 改用 `RUNNER_TEMP` 写入 `GITHUB_ENV`。
+- 后续 CI 运行 `39711118721` 仍失败：Python 3.12/3.14 Ubuntu 选中根目录 `.python-version` 的 3.13.16；Python 3.12–3.14 Windows 与 3.13 Ubuntu 的集成测试缺少 `playwright-core`；Ubuntu JavaScript 几何碰撞测试未识别 `axis:y_title`。当前补丁显式指定矩阵 Python 版本，并为 Python job 安装 Node、Playwright 和 Chromium，另修正碰撞测试的物理矩形对齐；尚待托管 CI 验证。
+- 本地 Python 全量 294 passed、149 warnings、6 subtests；JavaScript 全量 71 passed；Plotly Python 集成回归 1 passed。
+- 远端 `main` 的干净基线为 `50804b4`；本地 `main` 文件树与之相同，但历史含个人路径，禁止推送本地历史。新修复用干净快照发布。
 
 - Task 4A 资源限制修复已提交 `539a094`；Python 3.14.7 全量回归为 294 passed、22 warnings、6 subtests。
 - Task 4A 非功能格式改动已在 `3ede174` 清理；21 项资源与 Nature 审计测试通过，补丁哈希已更新。
@@ -24,7 +26,6 @@
 - Python 3.14.7 PNG 烟测保留类别标签和源图，尺寸为 1004×709；几何审查正确返回 `not_auditable`。
 - Python 图族导出报告为 `incomplete`：12 项 `passed`、52 项 `not_auditable`、0 项拒绝导出。52 项对应 `native_only` 类型。
 - 已检查 Python 联系表、代表 PNG、Plotly 联系表和 SVG；未发现明显裁切或重叠。这不代表 52 项自动审查通过。
-- GitHub `main` 当前为 `03e543b16a0496c9a69c451dce75e4949b9a2c70`；本地 `main` 干净但领先一个未发布提交，详见“活跃问题”。
 - Nature Figure 上游脚本保留 Apache-2.0 许可证副本，复用清单记录上游仓库、固定提交和文件哈希。
 - OMP Figure Skill 的 Task 4B 三个文件保持同步；Task 4A 四个文件已部署且哈希与分支一致。未安装依赖。
 - Python Skill 清单 SHA-256（未变）：`a475e41f833665b05da263c7c11242484cc883eabbf8dc37e3ab34b3e0b81e4b`。Figure 全树旧清单早于兼容补丁和 Task 4A 格式清理。
@@ -34,9 +35,9 @@
 
 ## 下一步
 
-- Task 4C 本地 Python/JavaScript CI 命令通过；视觉图库为 `incomplete`，52 项 `native_only` 几何审查未完成，0 项导出被拒绝。分支审查未发现额外代码缺陷。
-- 发布受阻：快进本地 `main` 会公开上述路径；当前约束不允许改写 `main`。等待用户选择安全集成方式。
-- 复核剩余问题并形成下一阶段设计提案。
+- 推送修复后的干净快照，等待 Windows/Linux Python 3.12–3.14 与 JavaScript CI 全绿。
+- 完成发布前审查并同步 `main`；不得推送含个人路径的本地历史。
+- 确认 OMP Skills 与远端版本一致，提交上下文和下一阶段设计提案。
 
 ## 用户约束
 
@@ -111,12 +112,12 @@
 - `rtk` 命令须显式指定仓库或工作树目录，不能只依赖外层 cwd。
 - Python Skill 复制目标必须与可导入的包路径一致；不能只按目录名字推导 import。
 - Figure 的嵌套复制目录、包元数据位置和安装命令必须在临时目标项目中一并验证。
+- Python 分发集成测试也调用 Node、Playwright 和 Chromium；Python CI job 必须配置这些开发依赖。
 
 ## 活跃问题
 
 - Plotly 可选标题曾导致顶部净空 5.04 pt，低于 6 pt 门槛 0.96 pt。Task 5 分发测试省略可选标题，不代表问题已解决。
 - Python 图族中有 52 项 `native_only` 导出不能通过完整自动几何审查；当前报告为 `incomplete`。
-- `e13f9dd` 是本地 `main` 唯一未推送提交，`387b3a6` 只在功能分支；两者均含个人绝对路径。禁止合并或推送，直到确定无需改写 `main` 且不会发布这些差异的安全方案。
 
 ## 验证入口
 

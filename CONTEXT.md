@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- 三级 API 已快进合并到本地 `main=2b7dd30`。公开远端和旧 `plotly-live-layout` 工作树未改。
+- 三级 API 已快进合并到本地 `main`。主工作树保留 `browser.test.js` 中两行空白的原有未提交改动。
 - 工作位于系统 Temp 独立工作树的 `figure-three-level-api` 分支。旧 `plotly-live-layout` 工作树保持原样。
 - Task 1（Python L1）完成，提交 `713a3d6`：`ScientificFigure.from_matplotlib()` 接收 Figure/Axes，操作副本；`audit()` 返回结构化结果。
 - Task 2（Python L2）完成，提交 `ded3b75`：受管布局、标注所有权、源图隔离、scope 限制、越界跳过恢复和失败候选清理。

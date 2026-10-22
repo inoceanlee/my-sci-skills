@@ -231,3 +231,38 @@ test("impossibly crowded mandatory Plotly labels reject without partial output",
     assert.match(result,/ANNOTATION_/);
   } finally { await browser.close(); }
 });
+
+
+test("browser fixture exposes live ScientificFigure layout", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const graph = document.createElement("div");
+      graph.style.cssText = "width:390px;height:300px";
+      document.body.appendChild(graph);
+      await Plotly.newPlot(
+        graph, [{ x: [0, 1], y: [0.2, 0.2], mode: "lines" }],
+        {}
+      );
+      const figure = ScientificFigure.fromPlotly(graph);
+      const layout = await figure.layout({
+        annotations: [{ text: "live label", x: 0.5, y: 0.2, required: true }]
+      });
+      const result = {
+        changed: layout.changed,
+        geometryStatus: layout.audit.geometryStatus,
+        annotationCount: graph.layout.annotations.length
+      };
+      figure.dispose();
+      return result;
+    });
+    assert.equal(result.changed, true);
+    assert.equal(result.geometryStatus, "passed");
+    assert.equal(result.annotationCount, 1);
+  } finally {
+    await browser.close();
+  }
+});

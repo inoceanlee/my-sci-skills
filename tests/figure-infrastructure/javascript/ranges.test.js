@@ -55,7 +55,8 @@ test("offline gallery resolves after test migration", () => {
   const scriptPaths = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
     .map((match) => match[1])
     .filter((src) => src.includes("scripts/figure-infrastructure/javascript/"));
-  assert.equal(scriptPaths.length, 5);
+  assert.ok(scriptPaths.some(src => src.endsWith("/javascript/pipeline.js")));
+  assert.ok(scriptPaths.some(src => src.endsWith("/javascript/scientific-figure.js")));
   for (const src of scriptPaths) {
     assert.ok(fs.existsSync(path.resolve(path.dirname(galleryPath), src)), src);
   }

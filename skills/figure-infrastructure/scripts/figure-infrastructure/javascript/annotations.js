@@ -70,10 +70,11 @@
       return segments;
     }
 
-    async place(node,items) {
+    async place(node,items,{allowExisting=false,names=[],profile="paper"}={}) {
       if(!items || items.length===0)return [];
       if(!Array.isArray(items))throw new Error("ANNOTATION_SPEC_INVALID");
-      if(node.layout.annotations?.length)throw new Error("ANNOTATION_EXISTING_UNSUPPORTED");
+      const external=node.layout.annotations||[];
+      if(external.length&&!allowExisting)throw new Error("ANNOTATION_EXISTING_UNSUPPORTED");
       const required=items.filter(x=>x.required!==false);
       if(!required.length)return [];
       for(const spec of required){
@@ -87,7 +88,10 @@
       const size=node._fullLayout._size,xx=node._fullLayout.xaxis,yy=node._fullLayout.yaxis;
       const frame={x:size.l,y:size.t,w:size.w,h:size.h};
       const fonts=node._fullLayout.font||{size:30};
-      const font={family:fonts.family||"Arial, sans-serif",size:Math.max(fonts.size-2,23)};
+      const font={
+        family:fonts.family||"Arial, sans-serif",
+        size:profile==="screen"?Math.max(fonts.size-2,12):Math.max(fonts.size-2,23)
+      };
       const segments=this.constructor.lineSegments(node,frame);
       const placed=[];
       const obstacles=[];
@@ -97,7 +101,10 @@
         const b=legend.getBoundingClientRect();
         obstacles.push({x:b.left-rootRect.left,y:b.top-rootRect.top,w:b.width,h:b.height});
       }
-
+      for(const element of node.querySelectorAll(".annotation .annotation-text")){
+        const b=element.getBoundingClientRect();
+        obstacles.push({x:b.left-rootRect.left,y:b.top-rootRect.top,w:b.width,h:b.height});
+      }
       for(const spec of required){
         const measurement=this.constructor.measureText(svg,spec.text,font);
         const anchor={x:xx._offset+xx.d2p(spec.x),y:yy._offset+yy.d2p(spec.y)};
@@ -128,24 +135,30 @@
         placed.push({
           x:spec.x,y:spec.y,text:spec.text,arrow:true,
           ax:chosen.candidate.x-anchor.x,ay:chosen.candidate.y-anchor.y,
-          box:chosen.rect
+          box:chosen.rect,name:names[placed.length]
         });
       }
 
-      await this.plotly.relayout(node,{annotations:placed.map(p=>({
-        x:p.x,y:p.y,xref:"x",yref:"y",
-        text:this.constructor.sanitize(p.text),
-        showarrow:true,
-        ax:p.ax,ay:p.ay,axref:"pixel",ayref:"pixel",
-        arrowhead:2,arrowsize:1,arrowwidth:1,arrowcolor:"#666",
-        font:{size:font.size,family:font.family,color:"#111"},
-        align:"center",xanchor:"center",yanchor:"middle",
-        bgcolor:"rgba(255,255,255,0.97)",borderpad:3
-      }))});
+      const existingBoxCount=node.querySelectorAll(".annotation .annotation-text").length;
+      await this.plotly.relayout(node,{annotations:[
+        ...external,
+        ...placed.map(p=>({
+          name:p.name,x:p.x,y:p.y,xref:"x",yref:"y",
+          text:this.constructor.sanitize(p.text),
+          showarrow:true,
+          ax:p.ax,ay:p.ay,axref:"pixel",ayref:"pixel",
+          arrowhead:2,arrowsize:1,arrowwidth:1,arrowcolor:"#666",
+          font:{size:font.size,family:font.family,color:"#111"},
+          align:"center",xanchor:"center",yanchor:"middle",
+          bgcolor:"rgba(255,255,255,0.97)",borderpad:3
+        }))
+      ]});
 
       const boxes=[...node.querySelectorAll(".annotation .annotation-text")];
-      if(boxes.length!==placed.length)throw new Error("ANNOTATION_RENDER_MISSING");
-      const bounds=boxes.map(el=>{
+      if(boxes.length!==existingBoxCount+placed.length)
+        throw new Error("ANNOTATION_RENDER_MISSING");
+      const newBoxes=boxes.slice(existingBoxCount);
+      const bounds=newBoxes.map(el=>{
         const b=el.getBoundingClientRect(),offset=svg.getBoundingClientRect();
         return {x:b.left-offset.left,y:b.top-offset.top,w:b.width,h:b.height};
       });
@@ -157,7 +170,7 @@
         for(let j=0;j<i;j++)if(intersect(b,bounds[j],2))
           throw new Error("ANNOTATION_OVERLAP");
       }
-      return placed.map(({x,y,text,arrow,ax,ay})=>({x,y,text,arrow,ax,ay}));
+      return placed.map(({x,y,text,arrow,ax,ay,name})=>({x,y,text,arrow,ax,ay,name}));
     }
   }
 

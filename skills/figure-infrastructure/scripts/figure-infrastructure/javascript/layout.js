@@ -3,7 +3,8 @@
 /** Plotly-native compact page layout and post-render physical geometry measurements. */
 (function (root) {
   class PlotlyLayoutPlanner {
-    static prepare(original, policy = {}, preset = null) {
+    static prepare(original, policy = {}, preset = null, profile = "paper") {
+      if (!["paper", "screen"].includes(profile)) throw new Error("INVALID_LAYOUT_PROFILE");
       const mode = policy.mode || "compact";
       const legendMode = policy.legend || "auto";
       if (!["compact", "preserve"].includes(mode)) throw new Error("INVALID_LAYOUT_MODE");
@@ -21,16 +22,20 @@
       layout.margin = Object.assign({}, original.margin || {}, {
         l: 50, r: 35, t: 95, b: 50, pad: 35, autoexpand: true
       });
-      layout.font = Object.assign({}, original.font || {}, {
-        size: Math.max(original.font?.size || 0, 30)
-      });
+      if (profile === "paper") {
+        layout.font = Object.assign({}, original.font || {}, {
+          size: Math.max(original.font?.size || 0, 30)
+        });
+      }
       for (const key of ["xaxis", "yaxis"]) {
         const axis = Object.assign({}, layout[key] || {});
         axis.automargin = true;
-        axis.tickfont = Object.assign({}, axis.tickfont || {}, {
-          size: Math.max(axis.tickfont?.size || 0, 26)
-        });
-        if (axis.title) {
+        if (profile === "paper") {
+          axis.tickfont = Object.assign({}, axis.tickfont || {}, {
+            size: Math.max(axis.tickfont?.size || 0, 26)
+          });
+        }
+        if (axis.title && profile === "paper") {
           axis.title = Object.assign({}, axis.title, {
             standoff: key === "xaxis" ? 60 : 45,
             font: Object.assign({}, axis.title.font || {}, {
@@ -44,17 +49,19 @@
         const legendPosition = legendMode === "inside"
           ? {x:1,y:1,xanchor:"right",yanchor:"top",orientation:"v"}
           : {x:1,y:1.040,xanchor:"right",yanchor:"bottom",orientation:"h"};
-        layout.legend = Object.assign({}, layout.legend || {}, legendPosition, {
-          font: Object.assign({}, layout.legend?.font || {}, {
+        const legend = Object.assign({}, layout.legend || {}, legendPosition);
+        if (profile === "paper") {
+          legend.font = Object.assign({}, layout.legend?.font || {}, {
             size: Math.max(layout.legend?.font?.size || 0, 28)
-          })
-        });
+          });
+        }
+        layout.legend = legend;
       }
       if(protectedAreas.length)this.excludeProtectedAreas(layout,protectedAreas,preset);
       return layout;
     }
 
-    static candidates(original, policy = {}, preset = null, hasLegend = true) {
+    static candidates(original, policy = {}, preset = null, hasLegend = true, profile = "paper") {
       const mode = policy.mode || "compact";
       const requestedLegend = policy.legend || "auto";
       const modes = [requestedLegend];
@@ -69,7 +76,7 @@
         if (seen.has(key)) continue;
         seen.add(key);
         candidates.push(this.prepare(
-          original, Object.assign({}, policy, {legend}), preset
+          original, Object.assign({}, policy, {legend}), preset, profile
         ));
         if (candidates.length === 5) break;
       }
@@ -228,9 +235,10 @@
     }
   }
 
-  const prepareCompactLayout = (layout,policy,preset) => PlotlyLayoutPlanner.prepare(layout,policy,preset);
-  const candidatePlotlyLayouts = (layout,policy,preset,hasLegend) =>
-    PlotlyLayoutPlanner.candidates(layout,policy,preset,hasLegend);
+  const prepareCompactLayout = (layout,policy,preset,profile) =>
+    PlotlyLayoutPlanner.prepare(layout,policy,preset,profile);
+  const candidatePlotlyLayouts = (layout,policy,preset,hasLegend,profile) =>
+    PlotlyLayoutPlanner.candidates(layout,policy,preset,hasLegend,profile);
   const adjustPlotlyLayoutForGeometry = (layout,issues,preset,areas,resolvedSize) =>
     PlotlyLayoutPlanner.adjustForGeometry(layout,issues,preset,areas,resolvedSize);
   const measurePlotlyLayout = (node,preset) => PlotlyLayoutPlanner.measure(node,preset);

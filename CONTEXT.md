@@ -27,11 +27,11 @@
 
 ### Git 与发布
 
-- 截至 2026-10-22，本地仓库和 GitHub 的 `main` 已同步。正式版本标签指向 `8f28441be2f575a76b64b7579579b316e868b549`。
+- 截至 2026-10-23，本地仓库和 GitHub 的 `main` 已同步。正式版本标签指向 `8f28441be2f575a76b64b7579579b316e868b549`。
 - `skills/figure-infrastructure/scripts/figure-infrastructure/pyproject.toml` 已声明 `version = "0.1.0"`；根项目的 `pyproject.toml` 也声明开发项目版本 `0.1.0`。
 - `figure-infrastructure` 已正式发布 `v0.1.0`：Git 标签 `figure-infrastructure-v0.1.0`，GitHub Release 为 `https://github.com/inoceanlee/my-sci-skills/releases/tag/figure-infrastructure-v0.1.0`。
 - 公开仓库的 CI 已存在；根目录 `package.json` 属于私有开发包，不是 npm 发行包。
-- Release 提供 `figure-infrastructure-v0.1.0.zip`（29 个 Git 跟踪文件）及同名 `.sha256` 校验文件；下载后与本地验证包的 SHA-256 一致：`cefe83da6f8bcd7f85adb4b2df55286a99b62230a7bc8218f2d816c4de044c11`。
+- Release 提供 `figure-infrastructure-v0.1.0.zip`（29 个 Git 跟踪文件）。GitHub 自动展示该附件的 SHA-256；下载包已与本地验证包核对一致：`cefe83da6f8bcd7f85adb4b2df55286a99b62230a7bc8218f2d816c4de044c11`。
 
 ## 下一步
 
@@ -59,6 +59,7 @@
 - 运行依赖由使用项目的 Python/Node 环境管理；不因一个后端而强制安装另一个后端依赖。
 - 科研图需要真实导出和视觉验收；仅通过单元测试或返回值不代表视觉效果达标。
 - 未经授权，不修改 OMP 安装或创建正式发布产物。
+- 后续 GitHub Release 只需上传各 Skill 的正式 ZIP；使用 GitHub Assets 自动显示的 SHA-256 校验值，不单独生成或上传 `.sha256` 文件。
 - 公开仓库不得提交私人数据、凭据、个人绝对路径和无法合法分发的第三方代码。
 
 ## 关键决策
@@ -95,7 +96,7 @@
 - Plotly 在使用项目已有的浏览器和 Node/npm 环境运行，脚本需按公开文档中的顺序加载。
 - 第一方源码采用 MIT；Nature Figure 第三方代码保留 Apache-2.0 许可、上游归属及固定来源信息。
 - 根目录的测试、锁文件、`.venv` 和 `node_modules` 不属于独立 Skill 运行包。
-- Figure Skill 独立发布：`figure-infrastructure-v0.1.0` 标签固定源码提交，GitHub Release 附独立 Skill ZIP 和 SHA-256 文件。`py-infrastructure` 独立维护，不共用 Figure 版本号。
+- Figure Skill 独立发布：`figure-infrastructure-v0.1.0` 标签固定源码提交，GitHub Release 附独立 Skill ZIP。`py-infrastructure` 独立维护，不共用 Figure 版本号。
 
 ## 可复用踩坑
 
@@ -128,4 +129,4 @@
 - OMP 安装入口为 `~/.omp/agent/skills/figure-infrastructure/`；以当前仓库 Skill 目录为源。
 
 ---
-_最后核对：2026-10-22_
+_最后核对：2026-10-23_

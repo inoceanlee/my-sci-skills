@@ -13,7 +13,7 @@
 
 ## 正式版本
 
-- **figure-infrastructure v0.1.0**：[GitHub Release](https://github.com/inoceanlee/my-sci-skills/releases/tag/figure-infrastructure-v0.1.0)。提供独立 Skill ZIP 与 SHA-256 校验文件。
+- **figure-infrastructure v0.1.0**：[GitHub Release](https://github.com/inoceanlee/my-sci-skills/releases/tag/figure-infrastructure-v0.1.0)。提供独立 Skill ZIP；文件 SHA-256 可在 GitHub Release 的附件右侧直接复制。
 - 下载 `figure-infrastructure-v0.1.0.zip`，解压得到 `figure-infrastructure/` 文件夹。将它放入 Agent 的 Skills 目录。
 - 运行依赖仍由使用项目负责，详见 `skills/figure-infrastructure/references/deployment.md`。
 - `py-infrastructure` 独立维护，目前可直接从仓库的 `skills/py-infrastructure/` 复制。

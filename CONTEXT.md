@@ -15,10 +15,9 @@
 - Task 3（JavaScript L1）已完成并提交 `0bdc590`；JavaScript 全量回归 73/73 通过，独立审查无问题。
 - Task 4（JavaScript L2）已完成并提交 `8b57fcd`：离屏布局、托管标注身份恢复、视图/版本保护、逐句柄取消、回滚和 96 DPI 屏幕配置；`rtk npm test` 87/87 通过，390px 与 1280px 浏览器截图已目视检查，独立复审无问题。
 
-## 下一步
-
-1. 完成 Task 5：将双后端导出迁移到三级 API，并保留尺寸、格式与输入隔离合同。
-2. 完成 Task 6：迁移旧调用、清理文档、全量验收与独立审查；只快进合并本地 main，不推送或部署。
+- Task 5（双后端 L3 导出）已完成实现：Python/JavaScript `ScientificFigure.export()` 支持工厂直调和 L2 后标注复用；候选选择及审查由各自管线负责，输入图保持不变。
+- Task 5 验证：Python 全量 311 tests、6 subtests 通过；JavaScript 全量 89/89 通过；评分与最终测量异常均验证候选图清理；三级 API PNG 真图已目视检查。
+- Task 6：迁移旧调用与文档，清理旧导出入口，补 Plotly 标题边界净空红测并整体验收；仅本地快进合并 main，不推送或部署。
 
 ## 用户约束
 

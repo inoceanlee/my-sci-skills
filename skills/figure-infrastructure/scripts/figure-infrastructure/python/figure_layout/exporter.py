@@ -18,15 +18,8 @@ from xml.etree import ElementTree
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from .annotations import place_annotations
-from .audit import (
-    ExportAudit,
-    GeometryAuditor,
-    GeometryIssue,
-    GeometryResult,
-    LayoutValidationError,
-)
-from .layout import FigureLayoutOptimizer, LayoutPolicy
+from .audit import ExportAudit, LayoutValidationError
+from .layout import LayoutPolicy
 from .nature import audit_nature_pdf
 from .presets import PRESETS, FigurePreset
 from .ranges import RangePolicy, resolve_range
@@ -72,7 +65,9 @@ class FigureExporter:
 
     @staticmethod
     def _is_colorbar(ax) -> bool:
-        return ax.get_label() == "<colorbar>" or getattr(ax, "_colorbar", None) is not None
+        return (
+            ax.get_label() == "<colorbar>" or getattr(ax, "_colorbar", None) is not None
+        )
 
     @classmethod
     def _primary_axes(cls, fig):
@@ -125,7 +120,9 @@ class FigureExporter:
             if count != 1:
                 raise LayoutValidationError([f"SVG_{attribute.upper()}_MISSING"])
             root = updated
-        path.write_text(text[:match.start()] + root + text[match.end():], encoding="utf-8")
+        path.write_text(
+            text[: match.start()] + root + text[match.end() :], encoding="utf-8"
+        )
 
     @staticmethod
     def _candidate_policies(policy):
@@ -133,7 +130,9 @@ class FigureExporter:
         if policy.mode == "preserve" or policy.legend == "fixed":
             return policies
         for legend in ("outside", "inside", "auto"):
-            if legend == policy.legend or any(item.legend == legend for item in policies):
+            if legend == policy.legend or any(
+                item.legend == legend for item in policies
+            ):
                 continue
             policies.append(replace(policy, legend=legend))
             if len(policies) == 5:
@@ -151,8 +150,11 @@ class FigureExporter:
         clearance_deficit = sum(issue.gap_deficit_pt or 0 for issue in geometry.issues)
         plot_fraction = metrics.plot_area_fraction if metrics is not None else 0
         return (
-            unauditable, hard_issues, geometry.clipping_count or 0,
-            clearance_deficit, -plot_fraction,
+            unauditable,
+            hard_issues,
+            geometry.clipping_count or 0,
+            clearance_deficit,
+            -plot_fraction,
         )
 
     @staticmethod
@@ -163,7 +165,10 @@ class FigureExporter:
             from PIL import Image
 
             with Image.open(path) as image:
-                if image.format != "PNG" or image.size != (preset.width_px, preset.height_px):
+                if image.format != "PNG" or image.size != (
+                    preset.width_px,
+                    preset.height_px,
+                ):
                     raise LayoutValidationError(["PNG_METADATA_MISMATCH"])
                 image.verify()
         elif image_format == "svg":
@@ -177,10 +182,14 @@ class FigureExporter:
                 view_values = tuple(float(value) for value in view_box)
             except ValueError as error:
                 raise LayoutValidationError(["SVG_METADATA_INVALID"]) from error
-            if (not width.endswith("mm") or not height.endswith("mm") or
-                    abs(width_mm - preset.width_mm) > .001 or
-                    abs(height_mm - preset.height_mm) > .001 or
-                    len(view_values) != 4 or any(value <= 0 for value in view_values[2:])):
+            if (
+                not width.endswith("mm")
+                or not height.endswith("mm")
+                or abs(width_mm - preset.width_mm) > 0.001
+                or abs(height_mm - preset.height_mm) > 0.001
+                or len(view_values) != 4
+                or any(value <= 0 for value in view_values[2:])
+            ):
                 raise LayoutValidationError(["SVG_METADATA_MISMATCH"])
         else:
             from pypdf import PdfReader
@@ -189,8 +198,10 @@ class FigureExporter:
             if len(reader.pages) != 1:
                 raise LayoutValidationError(["PDF_PAGE_COUNT_MISMATCH"])
             page = reader.pages[0]
-            if (abs(float(page.mediabox.width) - preset.width_in * 72) > .05 or
-                    abs(float(page.mediabox.height) - preset.height_in * 72) > .05):
+            if (
+                abs(float(page.mediabox.width) - preset.width_in * 72) > 0.05
+                or abs(float(page.mediabox.height) - preset.height_in * 72) > 0.05
+            ):
                 raise LayoutValidationError(["PDF_METADATA_MISMATCH"])
 
     def export(
@@ -231,87 +242,15 @@ class FigureExporter:
             working.set_size_inches(canvas.width_in, canvas.height_in, forward=True)
             axis_ranges = self._apply_range_policy(working, range_policy)
             working.set_dpi(canvas.dpi)
-            candidate_policies = self._candidate_policies(policy)
-            best = None
-            last_error = None
-            auditor = GeometryAuditor()
-            for candidate_policy in candidate_policies:
-                candidate = _deepcopy_figure(working)
-                candidate_axes = self._primary_axes(candidate)
-                metrics = None
-                try:
-                    if len(candidate_axes) == 1:
-                        optimizer = FigureLayoutOptimizer(candidate, candidate_axes[0])
-                        metrics = optimizer.optimize(candidate_policy)
-                    if annotations:
-                        place_annotations(candidate_axes[0], annotations)
-                    if len(candidate_axes) == 1:
-                        geometry = auditor.audit(
-                            candidate, candidate_axes[0],
-                            protected_areas=candidate_policy.protected_areas,
-                        )
-                    else:
-                        geometry = GeometryResult(
-                            "not_auditable",
-                            (GeometryIssue(
-                                "GEOMETRY_NOT_AUDITABLE", ("multiple_main_axes",), ()
-                            ),),
-                            (), None, None,
-                        )
-                except LayoutValidationError as error:
-                    last_error = error
-                    plt.close(candidate)
-                    continue
-                except ValueError as error:
-                    if str(error) not in ("PROTECTED_AREA_INVALID", "PROTECTED_AREA_CONFLICT"):
-                        raise
-                    details = tuple(
-                        GeometryIssue(
-                            str(error), (area.id,),
-                            ((area.x_pt, area.y_pt, area.width_pt, area.height_pt),),
-                        )
-                        for area in candidate_policy.protected_areas
-                    )
-                    last_error = LayoutValidationError([str(error)], details)
-                    plt.close(candidate)
-                    continue
+            from .pipeline import FigurePipeline
 
-                score = self._candidate_score(geometry, metrics)
-                if best is None or score < best[0]:
-                    if best is not None:
-                        plt.close(best[1])
-                    best = (score, candidate, geometry, metrics)
-                else:
-                    plt.close(candidate)
-            if best is None:
-                if last_error is not None:
-                    raise last_error
-                raise LayoutValidationError(["NO_LAYOUT_CANDIDATE"])
-
-            _, duplicate, geometry, metrics = best
-            hard_issues = tuple(
-                issue for issue in geometry.issues
-                if issue.code != "GEOMETRY_NOT_AUDITABLE"
+            duplicate, geometry, layout_metrics = (
+                FigurePipeline().select_export_candidate(working, policy, annotations)
             )
-            if hard_issues:
-                raise LayoutValidationError(
-                    tuple(dict.fromkeys(issue.code for issue in hard_issues)),
-                    hard_issues,
-                )
-            if len(self._primary_axes(duplicate)) == 1:
-                final_metrics = FigureLayoutOptimizer(
-                    duplicate, self._primary_axes(duplicate)[0]
-                ).measure()
-                layout_metrics = replace(
-                    final_metrics,
-                    collision_count=geometry.collision_count,
-                    clipping_count=geometry.clipping_count or 0,
-                )
-            else:
-                layout_metrics = None
 
             file_descriptor, temporary_name = tempfile.mkstemp(
-                prefix=f".{output.name}.", suffix=f".{image_format}",
+                prefix=f".{output.name}.",
+                suffix=f".{image_format}",
                 dir=output.parent,
             )
             os.close(file_descriptor)
@@ -320,11 +259,14 @@ class FigureExporter:
                 warnings.simplefilter("always")
                 with mpl.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42}):
                     duplicate.savefig(
-                        temporary_output, format=image_format,
-                        dpi=canvas.dpi, bbox_inches=None,
+                        temporary_output,
+                        format=image_format,
+                        dpi=canvas.dpi,
+                        bbox_inches=None,
                     )
             font_warnings = tuple(
-                str(w.message) for w in captured
+                str(w.message)
+                for w in captured
                 if "missing from font" in str(w.message)
             )
             if font_warnings:
@@ -346,21 +288,24 @@ class FigureExporter:
                         temporary_pdf = Path(tmp) / "rendered-for-nature-qa.pdf"
                         with mpl.rc_context({"pdf.fonttype": 42}):
                             duplicate.savefig(
-                                temporary_pdf, format="pdf",
-                                dpi=canvas.dpi, bbox_inches=None,
+                                temporary_pdf,
+                                format="pdf",
+                                dpi=canvas.dpi,
+                                bbox_inches=None,
                             )
                         nature_result = audit_nature_pdf(
                             temporary_pdf, strict=nature_audit_strict
                         )
                 if nature_audit_strict and nature_result.status != "passed":
-                    raise LayoutValidationError([
-                        "NATURE_AUDIT_" + nature_result.status.upper(),
-                        *nature_result.issues,
-                    ])
+                    raise LayoutValidationError(
+                        [
+                            "NATURE_AUDIT_" + nature_result.status.upper(),
+                            *nature_result.issues,
+                        ]
+                    )
 
-            passed = (
-                geometry.status == "passed" and
-                (nature_result is None or nature_result.status == "passed")
+            passed = geometry.status == "passed" and (
+                nature_result is None or nature_result.status == "passed"
             )
             os.replace(temporary_output, output)
             temporary_output = None
@@ -379,7 +324,8 @@ class FigureExporter:
                     axis_ranges=axis_ranges,
                     layout_metrics=layout_metrics,
                     nature_audit=nature_result,
-                    stage="geometry_complete" if geometry.status == "passed"
+                    stage="geometry_complete"
+                    if geometry.status == "passed"
                     else "geometry_partial",
                     geometry_status=geometry.status,
                     geometry_issues=geometry.issues,

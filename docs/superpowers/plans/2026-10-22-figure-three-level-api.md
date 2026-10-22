@@ -144,10 +144,10 @@
 - JS `await work.export({format="png",preset="single",rangePolicy,layoutPolicy,annotations}={}) -> ExportResult`.
 - Export must work **directly after factory call**, use paper profile, run the same internal L2 optimization and L1 audit, and never change source `fig`/`plotDiv` or already-managed `native` state. Export result shapes retain format-specific `path` vs `dataUrl`.
 
-- [ ] **Step 1 (red)** New export methods show exact original 1004×709/2126×1241 output, vector SVG actual metadata, Python PDF page, Nature `not_auditable` and resource protection. Direct L3 without preceding L1/L2, and after L2 both work. Input identity/trace/ranges untouched; unsupported JS PDF returns explicit code.
-- [ ] **Step 2** Run targeted Python/JS export contracts, record missing functions as red; keep old tests during migration.
-- [ ] **Step 3** Move export candidate loop to respective `pipeline`: L2 candidate selection → L1 audit → writer (`savefig`/`toImage`), preserving detached candidate cleanup, atomically promoted output files and metadata verification. Reuse existing format validation, Nature PDF audit; avoid two independent optimizers in old/new modules.
-- [ ] **Step 4** Targeted tests green; exact image visual inspection, no missing font glyphs or cropped essential labels; compare representative old/new plots before retiring old entry. Commit `feat(figure): compose three-level figure export`.
+- [x] **Step 1 (red)** Python/JS 三级导出合同覆盖双尺寸、格式元数据、PDF 页尺寸、Nature 资源边界、工厂直接导出及 L2 后导出；验证输入状态不变和 JS PDF 稳定错误码。异常注入还覆盖 Python 评分、最终测量失败时的候选图清理。
+- [x] **Step 2** 新 API 红测先因 `ScientificFigure.export()` 缺失而失败；旧测试与入口保留至迁移完成。
+- [x] **Step 3** 双后端候选选择与几何审查由各自 `pipeline` 负责；Python writer 保留格式验证、Nature 审查及原子替换，Plotly 候选引擎已迁入 JS `pipeline.js`。
+- [x] **Step 4** Python 311 tests、6 subtests 与 JavaScript 89/89 通过；三级 API PNG 真图已打开并目视检查；提交 `feat(figure): compose three-level figure export`。
 - **Rollback:** revert L3 migration; existing old exporter remains until Task 6.
 
 ### Task 6：公开 API 收敛、迁移文档、整体验收

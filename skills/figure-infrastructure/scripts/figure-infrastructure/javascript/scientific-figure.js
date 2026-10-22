@@ -66,6 +66,17 @@
       return operation;
     }
 
+    export(options = {}) {
+      this._ensureActive();
+      const state = this._state;
+      const operation = state.queue.then(() => {
+        if (!this._owner.active) throw new Error("FIGURE_DISPOSED");
+        return this._pipeline.export(this._plotDiv, options, state);
+      });
+      state.queue = operation.catch(() => {});
+      return operation;
+    }
+
     dispose() {
       if (this._disposed) return;
       this._owner.active = false;

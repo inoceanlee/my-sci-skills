@@ -94,6 +94,31 @@ class ScientificFigure:
         self._last_layout_signature = self._pipeline.signature(self._native)
         return result
 
+    def export(
+        self,
+        path,
+        *,
+        preset="single",
+        range_policy=None,
+        layout_policy=None,
+        annotations=None,
+        nature_pdf_audit=None,
+        nature_audit_strict=False,
+    ):
+        self._ensure_open()
+        specs = self._last_specs if annotations is None else tuple(annotations)
+        return self._pipeline.export_candidate(
+            self._native,
+            path,
+            preset=preset,
+            range_policy=range_policy,
+            layout_policy=layout_policy,
+            annotations=specs,
+            nature_pdf_audit=nature_pdf_audit,
+            nature_audit_strict=nature_audit_strict,
+            managed_gids=self._managed_gids,
+        )
+
     def close(self) -> None:
         if not self._closed:
             plt.close(self._native)

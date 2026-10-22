@@ -195,6 +195,7 @@ def test_copied_plotly_figure_exports_in_project_environment(tmp_path: Path) -> 
             str(figure_scripts / "layout.js"),
             str(figure_scripts / "annotations.js"),
             str(figure_scripts / "audit.js"),
+            str(figure_scripts / "pipeline.js"),
             str(figure_scripts / "figure-layout.js"),
         ],
         cwd=REPOSITORY_ROOT,

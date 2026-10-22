@@ -266,3 +266,122 @@ test("browser fixture exposes live ScientificFigure layout", async () => {
     await browser.close();
   }
 });
+
+
+test("ScientificFigure exports directly from factory without source mutation", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const graph = document.getElementById("plot");
+      const before = JSON.stringify({
+        data: graph.data,
+        layout: graph.layout,
+        range: graph._fullLayout.xaxis.range
+      });
+      const figure = ScientificFigure.fromPlotly(graph);
+      const exported = await figure.export({
+        format: "png",
+        preset: "single",
+      });
+      let pdfError;
+      try {
+        await figure.export({ format: "pdf" });
+      } catch (error) {
+        pdfError = error.code;
+      }
+      const after = JSON.stringify({
+        data: graph.data,
+        layout: graph.layout,
+        range: graph._fullLayout.xaxis.range
+      });
+      figure.dispose();
+      return {
+        before,
+        after,
+        dataUrl: exported.dataUrl,
+        width: exported.width,
+        height: exported.height,
+        format: exported.format,
+        pdfError
+      };
+    });
+    assert.equal(result.before, result.after);
+    assert.ok(result.dataUrl.startsWith("data:image/png;base64,"));
+    assert.equal(result.width, 1004);
+    assert.equal(result.height, 709);
+    assert.equal(result.format, "png");
+    assert.equal(result.pdfError, "UNSUPPORTED_FORMAT");
+  } finally {
+    await browser.close();
+  }
+});
+
+
+test("export reuses live managed annotations without changing Plotly state", async () => {
+  const browser = await chromium.launch({executablePath, headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.goto(pagePath);
+    await page.evaluate(() => window.ready);
+    const result = await page.evaluate(async () => {
+      const graph = document.createElement("div");
+      graph.style.cssText = "width:800px;height:600px";
+      document.body.appendChild(graph);
+      await Plotly.newPlot(
+        graph, [{ x: [0, 1], y: [0.5, 0.5], mode: "lines" }],
+        {
+          margin: { l: 120, r: 80, t: 60, b: 120 },
+          xaxis: {
+            range: [-0.1, 1.1], autorange: false, title: { text: "x" }
+          },
+          yaxis: {
+            range: [-0.1, 1.1], autorange: false, title: { text: "y" }
+          }
+        }
+      );
+      const figure = ScientificFigure.fromPlotly(graph);
+      await figure.layout({
+        layoutPolicy: { mode: "preserve" },
+        annotations: [{ text: "managed peak", x: 0.5, y: 0.9, required: true }]
+      });
+      const before = JSON.stringify({
+        data: graph.data,
+        layout: graph.layout,
+        range: graph._fullLayout.xaxis.range
+      });
+      const exported = await figure.export({
+        format: "svg",
+        layoutPolicy: { mode: "preserve" }
+      });
+      const svg = decodeURIComponent(exported.dataUrl.split(",")[1]);
+      const managedCount = (svg.match(/managed peak/g) || []).length;
+      const cleared = await figure.export({
+        format: "svg",
+        layoutPolicy: { mode: "preserve" },
+        annotations: []
+      });
+      const clearedSvg = decodeURIComponent(cleared.dataUrl.split(",")[1]);
+      const clearedCount = (clearedSvg.match(/managed peak/g) || []).length;
+      const after = JSON.stringify({
+        data: graph.data,
+        layout: graph.layout,
+        range: graph._fullLayout.xaxis.range
+      });
+      figure.dispose();
+      return {
+        before, after, managedCount, clearedCount,
+        width: exported.width, height: exported.height
+      };
+    });
+    assert.equal(result.before, result.after);
+    assert.equal(result.managedCount, 1);
+    assert.equal(result.clearedCount, 0);
+    assert.equal(result.width, 1004);
+    assert.equal(result.height, 709);
+  } finally {
+    await browser.close();
+  }
+});

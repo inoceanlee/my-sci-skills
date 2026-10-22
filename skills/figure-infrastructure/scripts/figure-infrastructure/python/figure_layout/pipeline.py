@@ -261,3 +261,146 @@ class FigurePipeline:
             ),
             gids,
         )
+
+    def select_export_candidate(self, working, policy, annotations):
+        from .exporter import FigureExporter, _deepcopy_figure
+
+        exporter = FigureExporter()
+        best = None
+        candidate = None
+        last_error = None
+        auditor = GeometryAuditor()
+        try:
+            candidate_policies = exporter._candidate_policies(policy)
+            for candidate_policy in candidate_policies:
+                candidate = _deepcopy_figure(working)
+                candidate_axes = exporter._primary_axes(candidate)
+                metrics = None
+                try:
+                    if len(candidate_axes) == 1:
+                        metrics = FigureLayoutOptimizer(
+                            candidate, candidate_axes[0]
+                        ).optimize(candidate_policy)
+                    if annotations:
+                        place_annotations(candidate_axes[0], annotations)
+                    if len(candidate_axes) == 1:
+                        geometry = auditor.audit(
+                            candidate,
+                            candidate_axes[0],
+                            protected_areas=candidate_policy.protected_areas,
+                        )
+                    else:
+                        geometry = GeometryResult(
+                            "not_auditable",
+                            (
+                                GeometryIssue(
+                                    "GEOMETRY_NOT_AUDITABLE",
+                                    ("multiple_main_axes",),
+                                    (),
+                                ),
+                            ),
+                            (),
+                            None,
+                            None,
+                        )
+                except LayoutValidationError as error:
+                    last_error = error
+                    plt.close(candidate)
+                    candidate = None
+                    continue
+                except ValueError as error:
+                    if str(error) not in (
+                        "PROTECTED_AREA_INVALID",
+                        "PROTECTED_AREA_CONFLICT",
+                    ):
+                        raise
+                    details = tuple(
+                        GeometryIssue(
+                            str(error),
+                            (area.id,),
+                            ((area.x_pt, area.y_pt, area.width_pt, area.height_pt),),
+                        )
+                        for area in candidate_policy.protected_areas
+                    )
+                    last_error = LayoutValidationError([str(error)], details)
+                    plt.close(candidate)
+                    candidate = None
+                    continue
+
+                score = exporter._candidate_score(geometry, metrics)
+                if best is None or score < best[0]:
+                    if best is not None:
+                        plt.close(best[1])
+                    best = (score, candidate, geometry, metrics)
+                else:
+                    plt.close(candidate)
+                candidate = None
+
+            if best is None:
+                if last_error is not None:
+                    raise last_error
+                raise LayoutValidationError(["NO_LAYOUT_CANDIDATE"])
+
+            _, candidate, geometry, metrics = best
+            best = None
+            hard_issues = tuple(
+                issue
+                for issue in geometry.issues
+                if issue.code != "GEOMETRY_NOT_AUDITABLE"
+            )
+            if hard_issues:
+                raise LayoutValidationError(
+                    tuple(dict.fromkeys(issue.code for issue in hard_issues)),
+                    hard_issues,
+                )
+            if len(exporter._primary_axes(candidate)) == 1:
+                final_metrics = FigureLayoutOptimizer(
+                    candidate, exporter._primary_axes(candidate)[0]
+                ).measure()
+                metrics = replace(
+                    final_metrics,
+                    collision_count=geometry.collision_count,
+                    clipping_count=geometry.clipping_count or 0,
+                )
+            else:
+                metrics = None
+
+            result = candidate, geometry, metrics
+            candidate = None
+            return result
+        finally:
+            if candidate is not None:
+                plt.close(candidate)
+            if best is not None:
+                plt.close(best[1])
+
+    def export_candidate(
+        self,
+        figure,
+        path,
+        *,
+        preset="single",
+        range_policy=None,
+        layout_policy=None,
+        annotations=(),
+        nature_pdf_audit=None,
+        nature_audit_strict=False,
+        managed_gids=(),
+    ):
+        from .exporter import FigureExporter, _deepcopy_figure
+
+        working = _deepcopy_figure(figure)
+        try:
+            _remove_managed(working, managed_gids)
+            return FigureExporter().export(
+                working,
+                path,
+                preset=preset,
+                range_policy=range_policy,
+                layout_policy=layout_policy,
+                annotations=annotations,
+                nature_pdf_audit=nature_pdf_audit,
+                nature_audit_strict=nature_audit_strict,
+            )
+        finally:
+            plt.close(working)

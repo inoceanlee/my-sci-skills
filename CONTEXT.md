@@ -10,9 +10,9 @@
 - Temp 中有两个工作树：开发分支 `project-api-environment`，发布快照分支 `sync-main-snapshot`。
 - 项目环境 API 和 Skill 文档迁移提交为 `8aa4dcf`、`29c9d36`、`0b4c5d3`。
 - Task 4C CI 的首次运行 `39710614748` 因 job 级 `runner.temp` 表达式无效而失败；`50804b4` 改用 `RUNNER_TEMP` 写入 `GITHUB_ENV`。
-- 后续 CI 运行 `39711118721` 仍失败：Python 3.12/3.14 Ubuntu 选中根目录 `.python-version` 的 3.13.16；Python 3.12–3.14 Windows 与 3.13 Ubuntu 的集成测试缺少 `playwright-core`；Ubuntu JavaScript 几何碰撞测试未识别 `axis:y_title`。当前补丁显式指定矩阵 Python 版本，并为 Python job 安装 Node、Playwright 和 Chromium，另修正碰撞测试的物理矩形对齐；尚待托管 CI 验证。
+- 托管 CI `39714629861` 与诊断运行 `39716114434` 均只在 Ubuntu JavaScript 几何测试失败；其余 7 个 job 通过。日志显示测试先选中 `tick:y:2` 与 legend 的碰撞，目标 `axis:y_title` 与 legend 碰撞排在第二。
 - 本地 Python 全量 294 passed、149 warnings、6 subtests；JavaScript 全量 71 passed；Plotly Python 集成回归 1 passed。
-- 远端 `main` 的干净基线为 `50804b4`；本地 `main` 文件树与之相同，但历史含个人路径，禁止推送本地历史。新修复用干净快照发布。
+- 远端 `main` 仍在 `79a4048`，该提交的托管 CI 失败。几何测试现按目标轴标题和图例筛选碰撞，并在断言失败时输出审计结果；提交为快照 `3622043`、开发分支 `1258dfe`，尚未通过新托管 CI。本地 `main` 历史含个人路径，禁止推送。
 
 - Task 4A 资源限制修复已提交 `539a094`；Python 3.14.7 全量回归为 294 passed、22 warnings、6 subtests。
 - Task 4A 非功能格式改动已在 `3ede174` 清理；21 项资源与 Nature 审计测试通过，补丁哈希已更新。
@@ -30,19 +30,19 @@
 - OMP Figure Skill 的 Task 4B 三个文件保持同步；Task 4A 四个文件已部署且哈希与分支一致。未安装依赖。
 - Python Skill 清单 SHA-256（未变）：`a475e41f833665b05da263c7c11242484cc883eabbf8dc37e3ab34b3e0b81e4b`。Figure 全树旧清单早于兼容补丁和 Task 4A 格式清理。
 - Figure 更新文件：`exporter.py` `4773e8931ec5b0432ade9269fb710b5b252ea50c10940e83c8c781eb147cb7ff`；`dependencies.md` `961ea22b338eb05c923085bfec9cbe17481d6485581146cc64db01745a3b0b84`；`deployment.md` `c84b5b8635446bb779bba14328baa0c9e14d48a589c3af45df7f0f306aa32ce8`。
-- Python Skill 复制目标为 `utils/py-infrastructure`；文档使用有效的动态导入，且已部署到 OMP。
-- Figure Skill 复制目标为 `utils/figure-infrastructure`；嵌套包配置和 Python/JavaScript/third-party 目录已部署到 OMP。
+- Python Skill 复制目标为 `utils/py-infrastructure`；Figure Skill 复制目标为 `utils/figure-infrastructure`。
+- OMP 与项目 Skills 的文档在统一换行后完全一致，目录与脚本树一致；换行差异来自 CRLF/LF，未安装依赖。
 
 ## 下一步
 
-- 推送修复后的干净快照，等待 Windows/Linux Python 3.12–3.14 与 JavaScript CI 全绿。
-- 完成发布前审查并同步 `main`；不得推送含个人路径的本地历史。
-- 确认 OMP Skills 与远端版本一致，提交上下文和下一阶段设计提案。
+- 用受控 CI 重新验证几何测试修复和完整八个 job。当前没有可用 WSL 或 Docker。
+- 更新开发分支与发布快照中的上下文；保持远端历史安全，不改写 `main`。
+- 完成发布审查并提出下一阶段目标；不自动创建版本标签。
 
 ## 用户约束
 
 - 每个 Skill 的程序实现只放在该 Skill 自己的 `scripts/`。
-- 不修改全局软件环境。Skill 依赖由实际使用项目的现有 Python/Node 环境管理；不为 Skill 创建独立运行环境。
+- 不改全局开发环境。本次开发依赖只装在系统 Temp 工作树；OMP Skills 目录不安装依赖。实际使用项目管理自身的 Python/Node 依赖。
 - 任务工作树、测试产物、截图、图表和临时脚本放系统 Temp，不放 `files` 目录。
 - 测试源码放根目录 `tests/`，不放进可分发的 `skills/`。
 - 原始 ADC 数据、历史报告和其他科研项目文件只读。

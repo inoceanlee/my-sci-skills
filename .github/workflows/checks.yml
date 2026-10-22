@@ -19,6 +19,36 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Configure Playwright browser path
+        shell: bash
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/playwright-browsers" >> "$GITHUB_ENV"
+
+      - name: Install Node project dependencies
+        run: npm ci
+
+      - name: Install Chromium and system dependencies
+        if: runner.os == 'Linux'
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+
+      - name: Install Chromium
+        if: runner.os == 'Windows'
+        run: node node_modules/playwright-core/cli.js install chromium
+
+      - name: Set browser executable
+        if: runner.os == 'Linux'
+        run: |
+          node -e 'require("node:fs").appendFileSync(process.env.GITHUB_ENV, `SCI_TEST_BROWSER=${require("playwright-core").chromium.executablePath()}\n`)'
+
+      - name: Set browser executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $browser = node -p 'require("playwright-core").chromium.executablePath()'
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "SCI_TEST_BROWSER=$browser`n", [Text.UTF8Encoding]::new($false))
 
       - uses: actions/setup-python@v7
         with:
@@ -29,10 +59,10 @@ jobs:
           enable-cache: true
 
       - name: Install project dependencies
-        run: uv sync --locked
+        run: uv sync --locked --python "${{ matrix.python-version }}"
 
       - name: Run Python tests
-        run: uv run --project . --locked python -m pytest -q
+        run: uv run --project . --locked --python "${{ matrix.python-version }}" python -m pytest -q
 
   javascript:
     name: JavaScript browser tests on ${{ matrix.os }}

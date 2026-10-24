@@ -157,32 +157,6 @@ description: 中英文科研与技术写作规范。用于科研论文、毕业�
 
 应说明的实际条件直接陈述，不用连续免责声明包围结果。
 
-## 词汇规范
-
-### 中文
-
-避免以下空泛或模板化表达：
-
-至关重要、不可或缺、深入探讨、旨在、重塑、格局、画卷、织锦、改变游戏规则。
-减少没有实际意义的程度副词，如“极大地”“显著地”“全面地”。
-有测量结果时直接使用数据说明变化。具有明确统计或技术含义的词语正常保留。
-
-### English
-
-避免缺少具体信息的表达：
-
-- plays a vital role
-- is of paramount importance
-- it is worth mentioning
-- delves into
-- groundbreaking
-- revolutionary
-- game-changing
-- transformative
-- in today's rapidly evolving landscape
-
-优先使用具体动词、可核对的结果和明确的比较对象。
-
 ## 全文验收
 
 **每次正式交付前，必须分派一个专门的子代理，按照本 skill 的要求完成全量审查。不得以抽样检查代替全文验收。**

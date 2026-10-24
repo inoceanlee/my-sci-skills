@@ -11,22 +11,13 @@ description: 中英文科研与技术写作规范。用于科研论文、毕业�
 
 ## 强制 Skill 协作
 
-使用本 Skill 时，必须实际加载并执行以下适用 Skills，不得仅凭已有知识代替加载。
+使用本 Skill 时，必须实际加载并执行以下 Skills。
 
-| Skill                                                  | 职责                               | 使用阶段         |
-| ------------------------------------------------------ | ---------------------------------- | ---------------- |
-| `anti-defensive-writing` / `anti-defensive-writing-en` | 科研叙事、突出贡献、控制防御性表达 | 构思、写作、审查 |
-| `ste-zh` / `asd-ste100`                                | 消除语言歧义，提高表达准确性       | 写作、修订       |
-| `humanizer-zh` / `humanizer`                           | 自然语言润色，改善行文质量         | 初稿完成后       |
-| `no-ai-slop`                                           | 补充检查模板化和机械化表达         | 最终审查         |
-| `caveman`                                              | 压缩 Agent 沟通及审查反馈中的冗余  | 全流程           |
+`anti-defensive-writing`、`anti-defensive-writing-en`、`ste-zh`、`asd-ste100``humanizer-zh``humanizer`、`no-ai-slop`、`caveman`、`sciwrite`
 
 - 根据正文语言选择中文或英文 Skill，不机械套用另一种语言的规范。
-- `anti-defensive-writing` 在科研叙事和表达策略上具有最高优先级。突出真正成立的贡献，不主动增加自我否定、无关局限或防御性免责声明。
-- 所有文字处理均须保留真实事实、数据及证据关系。事实准确性是不可突破的边界，不等于要求主动罗列研究的不足。
-- STE 负责清晰表达，不将学术正文机械改写为简短指令。
-- Humanizer 负责润色，`no-ai-slop` 负责补充检查，不重复执行同一类修改。
-- Caveman 主要约束 Agent 的沟通和反馈。正式文稿应充分解释科学内容，不以缩短篇幅为由删除必要信息。
+- `anti-defensive-writing` 在表达策略上具有最高优先级。突出真正成立的贡献，不增加自我否定、无关局限或防御性免责声明。
+- 严格遵守列出的各项 skills！
 - Skill 加载失败时必须明确报告，不得声称已经执行。
 
 ## 局部独立可读性

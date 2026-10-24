@@ -189,7 +189,7 @@ chinese_font = FontProperties(
 #### 图例与标注
 
 - 图例应尽量避开主要数据曲线、关键峰值和重要标注，一般默认 `ax.legend(loc="best")` 就可以利用原生机制解决大部分问题。
-- 有图例时默认使用 `ax.legend(loc="best")`，实际需要时允许调整位置和排列方式。
+- 默认使用 `ax.legend(loc="best")`！默认使用 `ax.legend(loc="best")`！默认使用 `ax.legend(loc="best")`！
 
 #### 风格细节
 

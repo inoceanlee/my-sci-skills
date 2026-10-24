@@ -15,12 +15,12 @@
 - `project-context`：维护项目 `CONTEXT.md`。
 - `py-infrastructure`：Python 输出、路径、日志、异常、计时及内存审计。
 - `py-plot-academic`：Python 科研绘图与导出规范。
-- `writing-standards`：中英文写作规范。
+- `sci-writing`：中英文科研与技术写作规范。
 - 其中 6 个由 OMP 安装目录原样迁入，迁入时按文件 Git 对象哈希核对一致。
 - `py-infrastructure` 保持原实现与 API 不变。
 - 各 Skill 独立分发；根目录仅用于开发和测试。
 - OMP Skill 目录作为使用副本；维护时以本仓库源码为准，再同步安装副本。
-- 学术写作时 `writing-standards` 调用外部 `anti-defensive-writing` 或 `anti-defensive-writing-en`，不随仓库分发。
+- `sci-writing` 的协作 Skills 以其 `SKILL.md` 中的清单为准，需单独安装，不随仓库分发。
 - 旧 Figure Skill 不在当前分发集合中。
 - `auto-git-commit` 已区分正式 Git 工作树与独立临时原型；前者正常进行分支和提交，后者可免 Git 流程。
 - `py-plot-academic` 已规定先明确指标和图种，再以速度为优先生成首批草图，依据用户反馈精修；初版落实既定绘图规范。
@@ -153,7 +153,7 @@
 - `close()` 必须在 `finally` 中执行，停止采样并写入摘要。
 - `tracemalloc` 只覆盖 Python 分配，不覆盖所有原生或 GPU 分配。
 - Python 测试通过不代表旧 Figure Skill 的字体与视觉效果通过。
-- `writing-standards` 依赖的外部写作 Skills 需要单独保留和安装。
+- `sci-writing` 依赖的外部写作 Skills 需要单独保留和安装。
 
 ## 活跃问题
 

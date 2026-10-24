@@ -15,7 +15,7 @@ EXPECTED_SKILLS = {
     "project-context",
     "py-infrastructure",
     "py-plot-academic",
-    "writing-standards",
+    "sci-writing",
 }
 
 

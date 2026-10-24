@@ -22,6 +22,9 @@
 - OMP Skill 目录作为使用副本；维护时以本仓库源码为准，再同步安装副本。
 - 学术写作时 `writing-standards` 调用外部 `anti-defensive-writing` 或 `anti-defensive-writing-en`，不随仓库分发。
 - 旧 Figure Skill 不在当前分发集合中。
+- `auto-git-commit` 已区分正式 Git 工作树与独立临时原型；前者正常进行分支和提交，后者可免 Git 流程。
+- `py-plot-academic` 已规定先明确指标和图种，再以速度为优先生成首批草图，依据用户反馈精修；初版落实既定绘图规范。
+- 上述两份 Skill 的源码与 OMP 安装副本内容一致（2026-10-24 核对）。
 
 ### 旧 Figure Skill
 
@@ -45,7 +48,7 @@
 ## 下一步
 
 1. 日后单独讨论 `latex-writer` 对 Typst 和 LaTeX 的支持，Typst 是主要使用场景。
-2. 待迁移稳定后，再研究 `py-plot-academic` 的可复用代码；当前不做功能扩展。
+2. 日后单独研究 `py-plot-academic` 的可复用绘图代码；当前已完成流程规范调整。
 
 ## 用户约束
 
@@ -56,10 +59,13 @@
 - 设计和计划默认只读；重要设计由用户审阅确认。
 - 云端负责探查、研究、设计和验收；本地 OMP Agent 负责实施。
 - 用户明确授权的简单维护任务允许直接处理。
-- 复杂设计采用 Superpowers `brainstorming`，实施计划采用 `writing-plans`。
+- 无论任务规模，优先打通验证核心目标的关键路径，尽早交付真实、可审查的结果；初版落实明确且易执行的规范。
+- 独立临时原型可省略正式设计稿、详细计划、TDD、Git 提交和完整审查；根据成果和反馈迭代，符合要求即可验收。
+- 正式集成时复用已验证实现，并恢复项目代码、测试及 Git 约束；临时目录不放宽外部数据、设备和系统的不可逆操作边界。
+- 需要正式设计与实施计划时使用 Superpowers `brainstorming`、`writing-plans`；关键方向尚未验证时可先快速试验。
 - 修改代码遵循 `oop-first`；涉及 Python 时遵循 `py-infrastructure`。
 - 使用 `project-context` 维护当前状态；Git 保留已完成工作历史。
-- 使用独立任务分支，验证后合并 `main`，再清理已合并分支。
+- 正式项目使用独立任务分支，验证后合并 `main`，再清理已合并分支。
 - 中文文档遵循 `ste-zh`，保持短句与明确术语。
 
 ### 技术与发布边界
@@ -86,7 +92,13 @@
 - OMP 原来受 Git 跟踪的 4 个 Skill 迁入后取消索引跟踪，磁盘文件保留。
 - OMP `.gitignore` 继续保护配置白名单，同时删去已迁移 Skill 的放行规则。
 - `latex-writer` 此轮保留在 OMP，后续单独扩展 Typst/LaTeX。
-- `py-plot-academic` 此轮仅迁移，暂不开发绘图基础设施。
+- `py-plot-academic` 已更新快速草图流程；可复用绘图代码的扩展另行研究。
+
+### 快速迭代工作流
+
+- OMP 全局 `AGENTS.md` 已采用“时间是第一资源”和“快速迭代”原则；复杂任务同样优先验证关键路径。
+- `auto-git-commit` 对正式项目及临时 Git worktree 继续生效；独立可抛弃的临时原型可直接试验。
+- 用户反馈一次科研绘图在约 5 分钟内产出满意草图；Hooks 维持现有配置，不作为速度优化对象。
 
 ### Python Skill 契约
 

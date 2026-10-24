@@ -1,8 +1,9 @@
 # my-sci-skills 项目规则
 
-- 根目录用于开发。分发时只复制 `skills/` 中需要的 Skill 文件夹。
-- 根目录测试和开发依赖不属于 Skill 运行包。
-- 先读取本文件、`CONTEXT.md`、`docs/superpowers/specs/` 中的已批准设计和对应实施计划，再开始改动。
+- 本仓库集中维护可独立复制的 Skills 源码。根目录用于开发，分发时只复制 `skills/` 中需要的 Skill 文件夹。
+- OMP 等 Agent 环境中的 Skill 文件视为使用副本，修改以本仓库为准；需要部署时再同步，不在两处独立维护。
+- 根目录测试、开发依赖不属于 Skill 运行包。纯规范 Skill 只需相应文档，无须添加程序代码。
+- 先读取本文件、`CONTEXT.md`、`docs/superpowers/specs/` 中存在的已批准设计和对应实施计划，再开始改动。
 - 本仓库已公开。提交及推送前检查完整 Git 差异与历史，不提交凭据、个人绝对路径、私人数据和缺乏再许可依据的第三方代码。
 - Skill 的唯一程序实现只能放在该 Skill 自己的 `scripts/` 内；跨语言接口只共享契约，不强制共用运行时代码。
 - `py-infrastructure` 只依赖 Python 标准库，不添加 Skill 运行时依赖。

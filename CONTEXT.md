@@ -2,72 +2,91 @@
 
 ## 项目目标
 
-维护可独立复制的 Python 项目基础设施 Skill：`py-infrastructure`。
+维护可独立复制的个人 Skills，统一管理规范与配套代码，并向 OMP 等 Agent 环境分发。
 
 ## 当前状态
 
 ### 仓库内容
 
-- 当前 `main` 仅保留 `py-infrastructure`。
-- Figure Skill 及其专属测试、JavaScript 开发包和依赖已从当前版本移除。
-- README、项目规则、根依赖、分发测试和 CI 已改为只支持 Python Skill。
-- `.gitignore` 未用于隐藏文件；Figure 文件已通过版本提交从当前树删除。
-- 根目录不再声明 npm scripts 或 Node 测试依赖。
-- 根项目使用 `uv` 和 `pytest` 做开发与测试。
-- CI 在 Windows、Ubuntu 和 Python 3.12、3.13、3.14 上运行 Python 测试。
+- 当前分发集合为 7 个 Skills。
+- `auto-git-commit`：Git 分支、提交和收尾约定。
+- `deai-comments`：按需处理模板化代码注释。
+- `oop-first`：对象优先的软件设计原则。
+- `project-context`：维护项目 `CONTEXT.md`。
+- `py-infrastructure`：Python 输出、路径、日志、异常、计时及内存审计。
+- `py-plot-academic`：Python 科研绘图与导出规范。
+- `writing-standards`：中英文写作规范。
+- 其中 6 个由 OMP 安装目录原样迁入，迁入时按文件 Git 对象哈希核对一致。
+- `py-infrastructure` 保持原实现与 API 不变。
+- 各 Skill 独立分发；根目录仅用于开发和测试。
+- OMP Skill 目录作为使用副本；维护时以本仓库源码为准，再同步安装副本。
+- 学术写作时 `writing-standards` 调用外部 `anti-defensive-writing` 或 `anti-defensive-writing-en`，不随仓库分发。
+- 旧 Figure Skill 不在当前分发集合中。
 
-### Figure Skill 撤回
+### 旧 Figure Skill
 
-- 用户实测反馈 Figure Skill 字体过小，文字不可读；用户认为当前版本质量不足。
-- Figure Skill 已暂停维护。用户可能在未来重新开发；目前不恢复其代码或发布。
-- 撤回提交为 `dac201c`。Figure Skill 已从当前 `main` 文件树移除。
-- GitHub Release `figure-infrastructure-v0.1.0` 和对应远端标签已删除。
-- GitHub Release 列表不再包含该版本，远端标签查询也无结果。
-- 提交历史仍保留原始实现，源提交为 `8f28441be2f575a76b64b7579579b316e868b549`。未来可从该提交恢复材料。
-- 删除 Release 和标签不会删除旧提交、Fork、已下载文件或外部缓存。
-- OMP 仍安装此前部署的 Figure Skill。用户没有要求卸载本地安装。
+- 用户实测旧 Figure Skill 存在字号过小、文字不可读等质量问题，当前暂停维护。
+- Figure 专属测试、JavaScript 开发包和依赖已从 Git 当前版本移除。
+- 撤回提交为 `dac201c`。原始源码保留在 Git 历史提交 `8f28441be2f575a76b64b7579579b316e868b549`。
+- GitHub Release `figure-infrastructure-v0.1.0` 及对应远端标签此前已删除。
+- 删除 Release 和标签不清除旧提交、Fork、下载文件或外部缓存。
+- OMP 中旧 Figure Skill 的安装状态独立于本仓库；本次迁移不处理它。
 
-### 当前验证
+### 开发环境与验证
 
-- 撤回后的 Python 全量测试通过：6 项，0 失败。
-- 分发检查只复制带有 `SKILL.md` 的 Skill，并验证 Python Skill 文档链接和许可证。
-- 根 `pyproject.toml` 只保留开发项目元数据和 `pytest` 开发依赖。
-- `uv.lock` 已重新生成；Figure 专属依赖已移除。
-- README 和 CI 不再引用 Figure、Plotly 或 npm。
+- 根目录使用 `uv` 和 `pytest` 管理开发与测试。
+- CI 在 Windows、Ubuntu 的 Python 3.12、3.13、3.14 上运行测试。
+- Python 运行时依赖不随 Skill 安装为独立环境。
+- `tests/distribution/` 检查 7 个 Skill 的独立复制、目录入口和文档相对链接。
+- `tests/py-infrastructure/` 保留 Python 基础设施的公开 API 与行为测试。
+- 原有 `py-infrastructure` 依赖、公共接口和运行配置均不因本次迁移改变。
+- 不恢复旧 Figure 测试或 JavaScript 开发依赖。
 
 ## 下一步
 
-1. 继续维护 `py-infrastructure`，除非用户另行提出任务。
-2. 如用户决定重新开发 Figure Skill，从历史提交取回源码，并先定义字号和实际导出验收标准。
+1. 日后单独讨论 `latex-writer` 对 Typst 和 LaTeX 的支持，Typst 是主要使用场景。
+2. 待迁移稳定后，再研究 `py-plot-academic` 的可复用代码；当前不做功能扩展。
 
 ## 用户约束
 
 ### 工作流程
 
-- 改动前读取全局和项目 `AGENTS.md`、`RULES.md`、`CONTEXT.md`、适用 Skills 和已批准设计。
-- 设计和计划默认只读。重要方案先与用户讨论。
-- 云端负责研究、设计和验收；本地 OMP Agent 负责经批准的代码实施。
-- 用户明确授权的简单维护任务可直接处理。
-- 复杂设计使用 Superpowers `brainstorming`，实施计划使用 `writing-plans`。
-- 修改代码遵循 `oop-first`；修改 Python 遵循 `py-infrastructure`。
-- 用 `project-context` 维护精简状态。Git 保存已完成工作的历史。
-- Git 任务使用独立分支。验证后合并到 `main`。
-- 提交和推送前检查完整差异、历史、凭据、个人路径和第三方许可。
-- 文档使用中文和 `ste-zh`。
+- 工作开始前读取全局和项目 `AGENTS.md`、`RULES.md`、`CONTEXT.md` 和适用 Skills。
+- 本地文件、实际 Git 状态和代码证据优先于旧会话描述。
+- 设计和计划默认只读；重要设计由用户审阅确认。
+- 云端负责探查、研究、设计和验收；本地 OMP Agent 负责实施。
+- 用户明确授权的简单维护任务允许直接处理。
+- 复杂设计采用 Superpowers `brainstorming`，实施计划采用 `writing-plans`。
+- 修改代码遵循 `oop-first`；涉及 Python 时遵循 `py-infrastructure`。
+- 使用 `project-context` 维护当前状态；Git 保留已完成工作历史。
+- 使用独立任务分支，验证后合并 `main`，再清理已合并分支。
+- 中文文档遵循 `ste-zh`，保持短句与明确术语。
 
 ### 技术与发布边界
 
-- `py-infrastructure` 只依赖 Python 标准库，不添加 Skill 运行时依赖。
-- 不创建 Skill 独立环境，不修改全局 Scoop、Python base、Node/npm 等环境。
-- 根环境只管理开发依赖。消费项目使用自己的 Python 环境。
-- Skill 程序实现只放在 `skills/<name>/scripts/`。
-- 分发测试和项目开发依赖不放进 Skill 运行包。
-- 用户明确授权前，不修改 OMP 安装，不创建、删除或发布 GitHub Release 和标签。
-- 用户明确授权前，不从公开仓库移除内容。
-- 公开仓库不得提交凭据、私人数据、个人绝对路径或无再许可依据的第三方代码。
-- 撤回公开版本时保留 Git 历史；不对 `main` 执行强制历史改写。
+- 各 Skill 源码仅由本仓库维护；OMP 保存可直接使用的复制件。
+- 每个 Skill 独立复制，不要求把整个仓库部署到目标 Agent。
+- 纯规范 Skill 可以只包含 `SKILL.md`。
+- Skill 的程序实现只放在自身 `scripts/` 内。
+- 跨语言代码只共享接口契约，不强制跨语言复用运行时代码。
+- `py-infrastructure` 只依赖 Python 标准库。
+- 不为 Skill 单独创建运行环境，消费项目使用自身已有 Python 环境。
+- 根目录依赖只供仓库测试使用；禁止修改全局开发环境。
+- 公开仓库不提交凭据、私人数据、个人绝对路径或无再许可依据的第三方代码。
+- OMP 的全局规则、Hooks 和第三方插件独立维护。
+- 用户明确授权前，不创建、删除或发布 GitHub Release 和标签。
+- 撤回公开版本时保留 Git 历史，不强制改写 `main`。
 
 ## 关键决策
+
+### 迁移和维护
+
+- `my-sci-skills` 是个人维护的 Skill 源码仓库，OMP Skills 目录是使用副本。
+- 新增 6 个 Skill 以原始内容迁入，不在迁移任务内改写其行为规范。
+- OMP 原来受 Git 跟踪的 4 个 Skill 迁入后取消索引跟踪，磁盘文件保留。
+- OMP `.gitignore` 继续保护配置白名单，同时删去已迁移 Skill 的放行规则。
+- `latex-writer` 此轮保留在 OMP，后续单独扩展 Typst/LaTeX。
+- `py-plot-academic` 此轮仅迁移，暂不开发绘图基础设施。
 
 ### Python Skill 契约
 
@@ -76,75 +95,70 @@
 - 包名含短横线；使用 `importlib.import_module("utils.py-infrastructure")` 加载。
 - 初始化一次 `Infrastructure`，并在 `finally` 中调用 `close()`。
 - 默认运行目录为 `<project>/output/<run-name>-<timestamp>/`。
-- `output_dir` 指定运行目录的父目录；相对路径以项目根目录为准。
+- `output_dir` 指定运行目录父目录；相对路径以项目根目录为准。
 - `output_path(category, filename)` 返回完整 `pathlib.Path`，并按需创建类别目录。
 - `category`、`filename` 和 `run_name` 必须是单个有效路径分量。
-- 路径校验拒绝路径穿越、Windows 非法字符、设备保留名、尾随点或空格。
+- 路径校验拒绝路径穿越、Windows 非法字符、保留设备名、尾随点或空格。
 - 路径分量长度不得超过 255 个 UTF-16 单元。
-- `Infrastructure.initialize()` 的参数为 `output_dir=None`、`memory_enabled=True`、`sample_interval_ms=100`、`run_name=None`。
+- `Infrastructure.initialize()` 参数为 `output_dir=None`、`memory_enabled=True`、`sample_interval_ms=100`、`run_name=None`。
 - 内存采样间隔最小为 50 毫秒。
-- 运行结束时，`close()` 停止采样并写入内存报告与日志摘要。
-- `errors.scope(label)` 默认记录并重新抛出异常；`suppress=True` 才抑制异常。
+- `close()` 停止采样并输出内存报告与日志摘要。
+- `errors.scope(label)` 默认记录并重新抛出异常，`suppress=True` 时才抑制。
 - `timer.scope(label)` 记录阶段耗时。
-- `memory.scope(label)` 记录阶段耗时和边界内存分配差异。
-- `infra.logger` 是该次运行的 logger；日志参数使用惰性格式化。
-- GPU 指标只读取已加载且正在使用的 PyTorch 或 TensorFlow API。
-- Skill 不导入、不安装 PyTorch 或 TensorFlow，也不自动判断内存泄漏。
+- `memory.scope(label)` 记录阶段耗时及范围内内存分配差异。
+- `infra.logger` 是当前运行的 logger，日志参数使用惰性格式化。
+- GPU 指标只通过已加载且正在使用的 PyTorch 或 TensorFlow API 读取。
+- 不主动导入或安装 PyTorch、TensorFlow，不自动判断内存泄漏。
 
-### 运行与采样边界
+### 运行与采样
 
-- `memory_enabled=False` 时不启动采样，报告仍记录禁用状态。
+- `memory_enabled=False` 不启动采样，报告仍记录禁用状态。
 - `run_name=None` 时使用入口脚本名作为运行目录前缀。
-- 运行目录重名时追加序号，不覆盖已有输出。
-- `errors.scope`、`timer.scope` 和 `memory.scope` 都是上下文管理器。
-- 基础调用不需要套用全部三个 scope。
-- 只在调用方需要对应诊断时加入 scope。
-- `process_memory` 指标受操作系统能力影响。
+- 运行目录重名追加序号，不覆盖已有输出。
+- `errors.scope`、`timer.scope`、`memory.scope` 均为上下文管理器。
+- 不要求所有调用都套用三个 scope，只在需要诊断时使用。
+- `process_memory` 受操作系统能力影响。
 - `tracemalloc` 只覆盖 Python 分配，不覆盖所有原生或 GPU 分配。
-- GPU 指标需要目标项目已加载且正在使用 PyTorch 或 TensorFlow。
-- 不把内存指标当作自动泄漏检测结果。
+- GPU 指标需要项目已加载且正在使用 PyTorch 或 TensorFlow。
+- 不将内存指标视为自动泄漏检测结论。
 
 ### 开发与测试
 
 - 根项目要求 Python `>=3.12,<3.15`。
-- CI 在 Ubuntu 和 Windows 上分别测试 Python 3.12、3.13、3.14。
-- `uv sync --locked` 按锁文件准备项目开发依赖。
-- `uv run --project . --locked python -m pytest -q` 运行完整 Python 测试。
-- 当前测试分布在 `tests/py-infrastructure/` 和 `tests/distribution/`。
-- `tests/distribution/` 验证复制后的 Skill 文档链接、许可和发布目录。
-- 根目录不再需要 npm 项目或 JavaScript 浏览器测试。
-
-### 许可与发布
-
-- `py-infrastructure` 使用 MIT 许可；分发时保留 Skill 目录中的 `LICENSE`。
-- 当前仓库没有公开的 `py-infrastructure` 版本 Release。
-- Figure Skill 暂无当前版本；未来若恢复开发，再单独建立版本和验收记录。
+- CI 在 Ubuntu、Windows 上测试 Python 3.12、3.13、3.14。
+- `uv run --project . --locked python -m pytest -q` 运行全量 Python 测试。
+- 分发检查只复制带 `SKILL.md` 的 Skill，排除开发缓存和依赖。
+- 分发检查同时核对新增 Skill 的名称、入口与文档链接。
+- `py-infrastructure` 的 MIT LICENSE 与现有公共 API 测试保持不变。
+- Figure 相关测试不作为当前代码质量的证明。
 
 ## 可复用踩坑
 
-- Python 包目录名含短横线时，使用 `importlib.import_module`，不要使用 `from` 语句。
-- 输出路径必须以消费项目根目录为基准，不依赖调用时的当前目录。
-- `close()` 必须在 `finally` 中执行，确保停止资源采样并写入摘要。
+- Git 的 `.gitignore` 不会让已跟踪文件自动停止跟踪；解除 OMP 跟踪必须修改 Git 索引。
+- 迁移后先核对源文件与副本一致，再取消旧仓库跟踪。
+- Python 包目录名含短横线时使用 `importlib.import_module`，不使用 `from`。
+- 输出路径以消费项目根目录为基准，不依赖当前工作目录。
+- `close()` 必须在 `finally` 中执行，停止采样并写入摘要。
 - `tracemalloc` 只覆盖 Python 分配，不覆盖所有原生或 GPU 分配。
-- 当前测试通过只证明 `py-infrastructure` 契约，不证明已撤回的 Figure Skill 视觉效果。
+- Python 测试通过不代表旧 Figure Skill 的字体与视觉效果通过。
+- `writing-standards` 依赖的外部写作 Skills 需要单独保留和安装。
 
 ## 活跃问题
 
 - `py-infrastructure` 当前没有已知阻塞问题。
-- Figure Skill 未来是否重做由用户决定；若重做，字体可读性必须纳入真实导出验收。
-- OMP 中的旧 Figure Skill 仍在本地安装；本轮没有卸载。
+- 旧 Figure Skill 的后续开发暂缓；是否重新开发由用户另行决定。
 
 ## 文件入口
 
 - `AGENTS.md` / `CONTEXT.md`：仓库规则和当前状态。
-- `README.md`：项目用途、复制方式和开发命令。
-- `skills/py-infrastructure/SKILL.md`：Skill 入口和使用示例。
-- `skills/py-infrastructure/references/api.md`：参数、输出路径、资源生命周期和审计边界。
+- `README.md`：Skill 清单、复制方式和开发命令。
+- `skills/<name>/SKILL.md`：各 Skill 的原始入口规范。
+- `skills/py-infrastructure/references/api.md`：Python 公共接口与边界。
 - `skills/py-infrastructure/scripts/py-infrastructure/`：标准库实现。
-- `tests/py-infrastructure/`：公开 API 和行为契约。
-- `tests/distribution/test_standalone_skills.py`：复制分发和文档链接检查。
+- `tests/py-infrastructure/`：Python 公开 API 和行为测试。
+- `tests/distribution/test_standalone_skills.py`：分发目录、引用与许可检查。
 - `.github/workflows/checks.yml`：跨平台 Python CI。
 - Figure 历史源码提交：`8f28441be2f575a76b64b7579579b316e868b549`。
 
 ---
-_最后核对：2026-10-23_
+_最后核对：2026-10-24_

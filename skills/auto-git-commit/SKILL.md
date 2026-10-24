@@ -1,15 +1,19 @@
 ---
 name: auto-git-commit
 description: |
-  Use automatically during ANY task that modifies files — creates a dedicated
-  git branch per step and commits after every logical unit of work, keeping the
-  main branch clean and the full history reversible. Triggers on any multi-step
-  operation, feature implementation, bug fix, refactoring, or file modification.
-  Makes git branches and commits transparently without asking permission.
-  Do NOT use for: read-only tasks; initializing a brand-new git repo from scratch.
+  Automatically manage Git branches and commits for formal project
+  modifications, including features, fixes, refactoring, and file changes.
+  Do not apply to read-only tasks or independent disposable prototypes
+  outside a project's Git working tree.
 ---
 
 # Auto Git Commit
+
+## 适用范围
+
+- 正式项目及其 Git worktree 使用本 Skill，即使工作树位于临时目录。
+- 独立临时原型可以直接创建、运行、修改或丢弃，不要求初始化 Git 仓库、建立分支或提交。
+- 原型纳入正式项目后，恢复正常的 Git 管理流程。
 
 ## main分支
 

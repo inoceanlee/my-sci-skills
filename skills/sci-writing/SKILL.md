@@ -13,7 +13,7 @@ description: 中英文科研与技术写作规范。用于科研论文、毕业�
 
 使用本 Skill 时，必须实际加载并执行以下 Skills。
 
-`anti-defensive-writing`、`anti-defensive-writing-en`、`ste-zh`、`asd-ste100``humanizer-zh``humanizer`、`no-ai-slop`、`caveman`、`sciwrite`
+`anti-defensive-writing`、`anti-defensive-writing-en`、`ste-zh`、`asd-ste100``humanizer-zh``humanizer`、`no-ai-slop`、`caveman`、`sciwrite-manuscript`、`sciwrite-outreach`、`sciwrite-process`、`sciwrite-proposals`、`sciwrite-prose`、`sciwrite-publish`
 
 - 根据正文语言选择中文或英文 Skill，不机械套用另一种语言的规范。
 - `anti-defensive-writing` 在表达策略上具有最高优先级。突出真正成立的贡献，不增加自我否定、无关局限或防御性免责声明。

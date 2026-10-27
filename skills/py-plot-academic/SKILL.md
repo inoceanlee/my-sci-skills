@@ -272,6 +272,7 @@ DOUBLE_COLUMN_WIDTH = 180 * MM_TO_INCH
 
 本节适用于所有 Python 绘图库。
 导出应优先使用对应绘图库的原生功能。具体裁剪方式由绘图库决定，统一要求最终效果。
+本 skill 应该尽量遵守复用 `py-infrastructure` 。
 
 ### 自动紧裁
 

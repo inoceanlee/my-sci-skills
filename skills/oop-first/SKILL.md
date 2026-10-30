@@ -78,10 +78,21 @@ Optimize for clear ownership, encapsulation, stable interfaces, and localized ch
 - Test behavior through public contracts where practical; test pure functions directly.
 - Explain significant architectural decisions only when they are non-obvious or affect future work.
 
-## Boundaries
+## Mandatory Code Organization
 
-- OOP is a default preference.
-- Explicit requirements and established project architecture take precedence.
-- Do not optimize for class count, method count, file count, or lines of code.
-- Do not introduce patterns, abstractions, or boilerplate solely to satisfy this skill.
-- Apply these principles during normal coding without requiring lengthy architectural explanations.
+Apply these rules to all new code and code modified by the current task.
+
+### Parameters and Execution
+
+- Define all adjustable parameters in a dedicated configuration module.
+- Execution code MUST obtain parameters through explicit interfaces. It MUST NOT hard-code or redefine adjustable parameters.
+- Each parameter MUST have one source of truth.
+- Keep fixed constants and runtime input separate from adjustable configuration.
+
+### Input, Processing, and Output
+
+- Separate input, processing, and output into three independent components.
+- **Input:** Acquire and parse data. MUST NOT perform core processing or output operations.
+- **Processing:** Execute algorithms and business logic. MUST NOT acquire external data or perform output operations.
+- **Output:** Save, send, export, or display results. MUST NOT implement core processing.
+- Pass data between components through explicit interfaces. Keep workflow coordination separate from these responsibilities.

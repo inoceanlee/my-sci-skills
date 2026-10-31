@@ -96,3 +96,7 @@ Apply these rules to all new code and code modified by the current task.
 - **Processing:** Execute algorithms and business logic. MUST NOT acquire external data or perform output operations.
 - **Output:** Save, send, export, or display results. MUST NOT implement core processing.
 - Pass data between components through explicit interfaces. Keep workflow coordination separate from these responsibilities.
+
+## Details
+
+- Interactive Progress Feedback: Long-running commands must provide real-time progress feedback, including the current operation, an animated indicator, and a measurable completion percentage. When progress cannot be accurately determined, use an indeterminate indicator instead of misleading percentages, so users can tell the process is still running.
